@@ -608,7 +608,7 @@ function Builder:HasTechIngredient(ingredient)
 end
 
 function Builder:MakeRecipe(recipe, pt, rot, skin, onsuccess)
-    if recipe ~= nil and not self.inst.sg:HasStateTag("drowning") and not self.inst.sg:HasStateTag("falling") then -- TODO(JBK): Check if "drowning" can be replaced with "busy" instead with no side effects.
+    if recipe ~= nil and not self.inst.sg:HasAnyStateTag("drowning", "falling", "floating") then -- TODO(JBK): This should be refactored to not do the state checks here.
         self.inst:PushEvent("makerecipe", { recipe = recipe })
         if self:IsBuildBuffered(recipe.name) or self:HasIngredients(recipe) then
             self.inst.components.locomotor:Stop()
@@ -652,7 +652,7 @@ function Builder:DoBuild(recname, pt, rotation, skin)
                 self.current_prototyper == nil or
                 not self.current_prototyper:IsValid() or
                 self.current_prototyper.components.prototyper == nil or
-                not CanPrototypeRecipe(recipe.level, self.current_prototyper.components.prototyper.trees)
+                ( not CanPrototypeRecipe(recipe.level, self.current_prototyper.components.prototyper.trees) and not (self.current_prototyper.components.craftingstation and self.current_prototyper.components.craftingstation:KnowsRecipe(recipe.name)))
             ) then
             -- manufacturing stations requires the current active protyper in order to work
             return false
@@ -921,6 +921,13 @@ function Builder:LongUpdate(dt)
     end
 end
 
+local function TryActivateCurrentResearchMachineOnFreeBuild(self, recipe)
+    local craftingstation = self.current_prototyper and self.current_prototyper.components.prototyper and self.current_prototyper.components.craftingstation
+    if not table.contains(self.recipes, recipe.name) and (CanPrototypeRecipe(recipe.level, self.accessible_tech_trees) or (craftingstation and craftingstation:KnowsRecipe(recipe.name))) then
+        self:ActivateCurrentResearchMachine(recipe)
+    end
+end
+
 --------------------------------------------------------------------------
 --RPC handlers
 --------------------------------------------------------------------------
@@ -943,9 +950,7 @@ local function _TryMakeIngredientRecipe(self, ing_recipe)
 
 					if self.freebuildmode then
 						--V2C: free-build should still trigger prototyping
-						if not table.contains(self.recipes, ing_recipe.name) and CanPrototypeRecipe(ing_recipe.level, self.accessible_tech_trees) then
-							self:ActivateCurrentResearchMachine(ing_recipe)
-						end
+                        TryActivateCurrentResearchMachineOnFreeBuild(self, ing_recipe)
 					elseif not knows_no_temp and canproto_no_temp and canlearn then
 						--assert(not usingtempbonus) --sanity check
 						--V2C: for recipes known through temp bonus buff,
@@ -1002,9 +1007,7 @@ function Builder:MakeRecipeFromMenu(recipe, skin)
 
                         if self.freebuildmode then
                             --V2C: free-build should still trigger prototyping
-                            if not table.contains(self.recipes, recipe.name) and CanPrototypeRecipe(recipe.level, self.accessible_tech_trees) then
-                                self:ActivateCurrentResearchMachine(recipe)
-                            end
+                            TryActivateCurrentResearchMachineOnFreeBuild(self, recipe)
 						elseif not knows_no_temp and canproto_no_temp and canlearn then
 							--assert(not usingtempbonus) --sanity check
 							--V2C: for recipes known through temp bonus buff,
@@ -1061,7 +1064,7 @@ function Builder:MakeRecipeAtPoint(recipe, pt, rot, skin)
     end
 
     if recipe.placer ~= nil and
-        self:KnowsRecipe(recipe) and
+		(recipe.always_allow_buffered_placer or self:KnowsRecipe(recipe)) and
         self:IsBuildBuffered(recipe.name) and
         TheWorld.Map:CanDeployRecipeAtPoint(pt, recipe, rot) then
         self:MakeRecipe(recipe, pt, rot, skin)
@@ -1095,11 +1098,7 @@ function Builder:BufferBuild(recname)
 
             if self.freebuildmode then
                 --V2C: free-build should still trigger prototyping
-                if not table.contains(self.recipes, recname) and CanPrototypeRecipe(recipe.level, self.accessible_tech_trees) then
-					-- Note:	This can currently activate prototypers that have no relation to the item or structure
-					--			built, such as when building a Fire Pit near a Science Machine or Mad Science Lab.
-                    self:ActivateCurrentResearchMachine(recipe)
-                end
+                TryActivateCurrentResearchMachineOnFreeBuild(self, recipe)
 			elseif not knows_no_temp and canproto_no_temp and canlearn then
 				--assert(not usingtempbonus) --sanity check
 				--V2C: for recipes known through temp bonus buff,
