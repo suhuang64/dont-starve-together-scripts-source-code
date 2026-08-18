@@ -133,6 +133,7 @@ local function fn()
     ------------------------------------------
 
     inst:AddComponent("knownlocations")
+    inst:AddComponent("drownable")
 
     ------------------------------------------
 
@@ -185,6 +186,11 @@ local mutated_prefabs =
 
     -- Not loaded for normal, spawner handles it.
     "circlingbuzzard_lunar",
+}
+
+local mutated_scrapbook_adddeps =
+{
+	"lunarthrall_plant_gestalt",
 }
 
 local FX_SIZES = { "tiny", "small", "med", "large" }
@@ -303,10 +309,9 @@ local function Mutated_OnDeath(inst)
 end
 
 local function Mutated_EnterMigration(inst)
-    local mutatedbirdmanager = TheWorld.components.mutatedbirdmanager
-    if mutatedbirdmanager then
-        mutatedbirdmanager:FillMigrationTaskAtInst("mutatedbuzzard_gestalt", inst, 1)
-        inst:Remove()
+    local migrationmanager = TheWorld.components.migrationmanager
+    if migrationmanager and not inst:IsInLimbo() then
+        migrationmanager:EnterMigration(MIGRATION_TYPES.MUTATED_BUZZARD_GESTALT, inst)
     end
 end
 
@@ -434,6 +439,9 @@ local function mutated_fn()
     if not TheWorld.ismastersim then
         return inst
     end
+
+	inst.scrapbook_adddeps = mutated_scrapbook_adddeps
+
     ------------------------------------------
     inst:AddComponent("health")
     inst.components.health:SetMaxHealth(TUNING.MUTATEDBUZZARD_HEALTH)
@@ -476,6 +484,8 @@ local function mutated_fn()
         inst.components.timer:StartTimer("flamethrower_cd", 5 + math.random() * 2)
     end
 
+    inst:AddComponent("drownable")
+
     inst.sounds = mutated_sounds
 
     inst.flame_pool = {}
@@ -499,7 +509,7 @@ local function mutated_fn()
     inst:SetBrain(brain)
     inst.sg.mem.nocorpse = true
 
-    if TheWorld.components.mutatedbirdmanager ~= nil then
+    if TheWorld.components.mutatedbuzzardmanager ~= nil then
         TheWorld:PushEvent("ms_registermutatedbuzzard", inst)
     end
 

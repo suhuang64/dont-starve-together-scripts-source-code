@@ -213,9 +213,7 @@ local _GroundDetectionUpdate = _ismastersim and function(debris, override_densit
                         elseif v.components.combat ~= nil then
                             v.components.combat:GetAttacked(debris, 30, nil)
                         elseif v.components.inventoryitem ~= nil then
-                            if v.components.mine ~= nil then
-                                v.components.mine:Deactivate()
-                            end
+                            DeactivateInventoryItemBeforeLaunch(v)
                             Launch(v, debris, TUNING.LAUNCH_SPEED_SMALL)
                         end
                     end
@@ -328,15 +326,13 @@ local SpawnDebris = _ismastersim and function(spawn_point, override_prefab, over
         prefab = override_prefab or prefab
         local debris
         if prefab == "rabbit" then
-            if math.random() < TUNING.RABBITKING_LUCKY_ODDS_QUAKER then -- This is a lot cheaper to roll than finding a close player do it first.
+            local x, y, z = spawn_point:Get()
+            local player = FindClosestPlayerInRangeSq(x, y, z, TUNING.RABBITKING_TELEPORT_DISTANCE_SQ, true)
+            if player and TryLuckRoll(player, TUNING.RABBITKING_LUCKY_ODDS_QUAKER, LuckFormulas.LuckyRabbitSpawn) then
                 local rabbitkingmanager = TheWorld.components.rabbitkingmanager
                 if rabbitkingmanager and not rabbitkingmanager:ShouldStopActions() then -- Same with this.
-                    local x, y, z = spawn_point:Get()
-                    local player = FindClosestPlayerInRangeSq(x, y, z, TUNING.RABBITKING_TELEPORT_DISTANCE_SQ, true)
-                    if player then
-                        if rabbitkingmanager:CreateRabbitKingForPlayer(player, spawn_point, "lucky", {nopresentation = true,}) then
-                            debris = rabbitkingmanager:GetRabbitKing()
-                        end
+                    if rabbitkingmanager:CreateRabbitKingForPlayer(player, spawn_point, "lucky", {nopresentation = true,}) then
+                        debris = rabbitkingmanager:GetRabbitKing()
                     end
                 end
             end
@@ -410,7 +406,7 @@ local DoDropForPlayer = _ismastersim and function(player, reschedulefn)
     local char_pos = Vector3(player.Transform:GetWorldPosition())
     local override_prefab, rad, override_density
     local riftspawner = _world.components.riftspawner
-    if riftspawner and riftspawner:IsShadowPortalActive() and math.random() < TUNING.RIFT_SHADOW1_QUAKER_ODDS then
+    if riftspawner and riftspawner:IsShadowPortalActive() and TryLuckRoll(player, TUNING.RIFT_SHADOW1_QUAKER_ODDS, LuckFormulas.ShadowRiftQuaker) then
         override_prefab = "cavein_boulder"
         rad = TUNING.RIFT_SHADOW1_QUAKER_RADIUS
         override_density = 0

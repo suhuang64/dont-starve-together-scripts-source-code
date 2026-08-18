@@ -23,8 +23,10 @@ end
 
 local function OnLoad(inst, data)--, ents)
 	if data then
-		if data.ver == "rifts6" then
-
+		if data.ver == "rifts7" then
+			inst.components.inspectable:SetDescription(subfmt(STRINGS.TEMP_BETA_MSG.RIFTS7_FMT, { name = STRINGS.NAMES.VAULT_PILLAR_GUARD }))
+		elseif data.ver == "rifts6" then
+			inst.components.inspectable:SetDescription(STRINGS.TEMP_BETA_MSG.RIFTS6_BASIC)
 		elseif data.killtime then
 			rifts5_SetKillTime(inst, data.killtime, data.boss)
 		else
@@ -48,6 +50,8 @@ local function fn()
 	inst.AnimState:SetBuild("mapscroll")
 	inst.AnimState:PlayAnimation("idle")
 
+    inst.pickupsound = "paper"
+
 	inst.entity:SetPristine()
 
 	if not TheWorld.ismastersim then
@@ -58,7 +62,7 @@ local function fn()
 	inst.components.inventoryitem:ChangeImageName("mapscroll")
 
 	inst:AddComponent("inspectable")
-	inst.components.inspectable:SetDescription(STRINGS.TEMP_BETA_MSG.RIFTS6_BASIC)
+	inst.components.inspectable:SetDescription(subfmt(STRINGS.TEMP_BETA_MSG.RIFTS7_FMT, { name = STRINGS.NAMES.VAULT_PILLAR_GUARD }))
 
 	inst:AddComponent("erasablepaper")
 

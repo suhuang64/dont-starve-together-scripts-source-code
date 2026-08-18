@@ -244,6 +244,7 @@ local function try_goto_electrocute_state(inst, data, state, statedata, ongotost
 					attackdata = data,
 					duration = data.duration,
 					noburn = data.noburn,
+					numforks = data.numforks, --pass 0 (not nil) for no forking
 				}
 			) or data
 		elseif inst.sg:HasState("hit") then
@@ -281,6 +282,8 @@ local function try_electrocute_onattacked(inst, data, state, statedata, ongotost
 		and attack_can_electrocute(inst, data)
 		and not (inst.components.inventory and inst.components.inventory:IsInsulated())
 		--and not inst:HasTag("electricdamageimmune") --V2C: redundant. either shouldn't have "electrocute" states if immune, or if using a shared SG then set sg.mem.noelectrocute = true
+		--NOTE: players (e.g. wx) still goto electrocute state even if "electricdamageimmune"
+		--      so we actually CAN'T check the tag here, or it will break players' behaviour.
 		and (not inst.sg:HasAnyStateTag("nointerrupt", "noelectrocute") or inst.sg:HasStateTag("canelectrocute"))
 		and not electrocute_recovery_delay(inst)
 		and try_goto_electrocute_state(inst, data, state, statedata, ongotostatefn)
@@ -322,8 +325,11 @@ end
 local function try_electrocute_onevent(inst, data, state, statedata, ongotostatefn)
 	return not (inst.components.inventory and inst.components.inventory:IsInsulated())
 		--and not inst:HasTag("electricdamageimmune") and --V2C: redundant. either shouldn't have "electrocute" states if immune, or if using a shared SG then set sg.mem.noelectrocute = true
+		--NOTE: players (e.g. wx) still goto electrocute state even if "electricdamageimmune"
+		--      so we actually CAN'T check the tag here, or it will break players' behaviour.
 		and not inst.sg.mem.noelectrocute
 		and (not inst.sg:HasAnyStateTag("dead", "nointerrupt", "noelectrocute") or inst.sg:HasStateTag("canelectrocute"))
+		and not (data and data.attacker and not data.noresist and electrocute_recovery_delay(inst))
 		and try_goto_electrocute_state(inst, data, state, statedata, ongotostatefn)
 end
 
@@ -761,7 +767,7 @@ end
 CommonHandlers.OnHop = function()
     return EventHandler("onhop",
         function(inst)
-            if (inst.components.health == nil or not inst.components.health:IsDead()) and (inst.sg:HasStateTag("moving") or inst.sg:HasStateTag("idle")) then
+            if (inst.components.health == nil or not inst.components.health:IsDead()) and inst.sg:HasAnyStateTag("moving", "idle") then
                 if not inst.sg:HasStateTag("jumping") then
                     if inst.components.embarker and inst.components.embarker.antic and inst:HasTag("swimming") then
                         inst.sg:GoToState("hop_antic")
@@ -816,6 +822,9 @@ CommonStates.AddHopStates = function(states, wait_for_pre, anims, timelines, lan
 	            inst.Physics:SetLocalCollisionMask(COLLISION.GROUND)
 			end
 			inst.components.embarker:StartMoving()
+            if fns and fns.pre_ontimeout then
+                fns.pre_ontimeout(inst)
+            end
 		end,
 
         events =
@@ -1422,16 +1431,12 @@ CommonStates.AddCombatStates = function(states, timelines, anims, fns, data)
 
         timeline = timelines ~= nil and timelines.attacktimeline or nil,
 
-        onexit = function(inst)
-            if fns ~= nil and fns.attackexit ~= nil then
-                fns.attackexit(inst)
-            end
-        end,
-
         events =
         {
             EventHandler("animover", idleonanimover),
         },
+
+		onexit = fns and fns.attackexit,
     })
 
     table.insert(states, State{
@@ -1457,6 +1462,8 @@ CommonStates.AddCombatStates = function(states, timelines, anims, fns, data)
         } or nil,
 
         timeline = timelines ~= nil and timelines.deathtimeline or nil,
+
+		onexit = fns and fns.deathexit,
     })
 end
 
@@ -1585,7 +1592,7 @@ CommonStates.AddElectrocuteStates = function(states, timelines, anims, fns)
 end
 
 --------------------------------------------------------------------------
-CommonStates.AddDeathState = function(states, timeline, anim)
+CommonStates.AddDeathState = function(states, timeline, anim, fns, data)
     table.insert(states, State{
         name = "death",
         tags = { "busy" },
@@ -1597,9 +1604,20 @@ CommonStates.AddDeathState = function(states, timeline, anim)
             inst.AnimState:PlayAnimation(anim or "death")
             RemovePhysicsColliders(inst)
             inst:DropDeathLoot()
+
+            if fns ~= nil and fns.deathenter ~= nil then
+                fns.deathenter(inst)
+            end
         end,
 
         timeline = timeline,
+
+        events = data ~= nil and data.has_corpse_handler and
+        {
+            CommonHandlers.OnCorpseDeathAnimOver(),
+        } or nil,
+
+		onexit = fns and fns.deathexit,
     })
 end
 
@@ -2104,10 +2122,11 @@ local function DoWashAshore(inst, skip_splash)
 	inst.components.drownable:WashAshore()
 end
 
-CommonStates.AddSinkAndWashAshoreStates = function(states, anims, timelines, fns)
+CommonStates.AddSinkAndWashAshoreStates = function(states, anims, timelines, fns, data)
 	anims = anims or {}
 	timelines = timelines or {}
 	fns = fns or {}
+    data = data or {}
 
     table.insert(states, State{
         name = "sink",
@@ -2142,6 +2161,9 @@ CommonStates.AddSinkAndWashAshoreStates = function(states, anims, timelines, fns
 				DoWashAshore(inst, skip_anim)
 			end
 
+            if fns.sink_onenter ~= nil then
+                fns.sink_onenter(inst)
+            end
         end,
 
 		timeline = timelines.sink,
@@ -2150,7 +2172,7 @@ CommonStates.AddSinkAndWashAshoreStates = function(states, anims, timelines, fns
         {
             EventHandler("animover", function(inst)
                 if inst.sg.statemem.has_anim and inst.AnimState:AnimDone() then
-					DoWashAshore(inst)
+					DoWashAshore(inst, data.skip_splash)
 				end
             end),
 
@@ -2186,6 +2208,10 @@ CommonStates.AddSinkAndWashAshoreStates = function(states, anims, timelines, fns
 			if inst.components.combat ~= nil then
 				inst.components.combat:DropTarget()
 			end
+
+            if fns.sink_onexit ~= nil then
+                fns.sink_onexit(inst)
+            end
 
 			inst:RestartBrain("sinking")
         end,
@@ -2273,10 +2299,11 @@ local function DoVoidFall(inst, skip_vfx)
     end
 end
 
-CommonStates.AddVoidFallStates = function(states, anims, timelines, fns)
+CommonStates.AddVoidFallStates = function(states, anims, timelines, fns, data)
 	anims = anims or {}
 	timelines = timelines or {}
 	fns = fns or {}
+    data = data or {}
 
     table.insert(states, State{
         name = "abyss_fall",
@@ -2320,7 +2347,7 @@ CommonStates.AddVoidFallStates = function(states, anims, timelines, fns)
         {
             EventHandler("animover", function(inst)
                 if inst.sg.statemem.has_anim and inst.AnimState:AnimDone() then
-					DoVoidFall(inst)
+					DoVoidFall(inst, data.skip_vfx)
 				end
             end),
 
@@ -2357,6 +2384,10 @@ CommonStates.AddVoidFallStates = function(states, anims, timelines, fns)
 				inst.components.combat:DropTarget()
 			end
 
+            if fns.abyss_fall_onenter ~= nil then
+
+            end
+
 			inst:RestartBrain("abyss_fall")
         end,
     })
@@ -2388,7 +2419,7 @@ CommonStates.AddVoidFallStates = function(states, anims, timelines, fns)
             SpawnPrefab("fallingswish_clouds_fast").Transform:SetPosition(x, y, z)
         end,
 
-		timeline = timelines.fallinvoid,
+		timeline = timelines.voiddrop,
 
         events =
         {
@@ -2475,6 +2506,26 @@ CommonStates.AddCorpseStates = function(states, anims, fns, overridecorpseprefab
         end
     end
 
+    local function TryReplaceWithCorpsePrefab(inst)
+        local corpseprefab = overridecorpseprefab or inst.sg.sg.name.."corpse"
+        local corpse = TryEntityToCorpse(inst, corpseprefab) or nil
+        if corpse == nil then
+			inst:AddTag("NOCLICK")
+			inst.persists = false
+			RemovePhysicsColliders(inst)
+
+			-- time since death anim started
+			local delay = (inst.components.health.destroytime or 2) - inst.sg.statemem.deathtimeelapsed
+            if delay > 0 then
+				inst.sg:SetTimeout(delay)
+			else
+				DoCorpseErode(inst)
+			end
+        elseif fns and fns.corpseoncreate ~= nil then
+            fns.corpseoncreate(inst, corpse)
+        end
+    end
+
     table.insert(states, State{
 		name = "corpse",
 		tags = { "dead", "busy", "noattack" },
@@ -2486,7 +2537,7 @@ CommonStates.AddCorpseStates = function(states, anims, fns, overridecorpseprefab
 
             -- Assuming the death animation is one animation. Is there a case where it's split up?
             inst.sg.statemem.deathtimeelapsed = (inst.AnimState:GetCurrentAnimationNumFrames() + 1) * FRAMES
-			
+
             if inst.components.locomotor ~= nil then
                 inst.components.locomotor:Stop()
             end
@@ -2497,28 +2548,15 @@ CommonStates.AddCorpseStates = function(states, anims, fns, overridecorpseprefab
             end
 		end,
 
+        events =
+        {
+            -- For sleep cases.
+            EventHandler("forcecorpsereplace", TryReplaceWithCorpsePrefab)
+        },
+
 		timeline =
 		{
-            --a 1 frame delay in case we are loading
-            FrameEvent(1, function(inst)
-                local corpseprefab = overridecorpseprefab or inst.sg.sg.name.."corpse"
-                local corpse = TryEntityToCorpse(inst, corpseprefab) or nil
-                if corpse == nil then
-	        		inst:AddTag("NOCLICK")
-	        		inst.persists = false
-	        		RemovePhysicsColliders(inst)
-
-	        		-- time since death anim started
-	        		local delay = (inst.components.health.destroytime or 2) - inst.sg.statemem.deathtimeelapsed
-                    if delay > 0 then
-	        			inst.sg:SetTimeout(delay)
-	        		else
-	        			DoCorpseErode(inst)
-	        		end
-                elseif fns and fns.corpseoncreate ~= nil then
-                    fns.corpseoncreate(inst, corpse)
-                end
-            end)
+            FrameEvent(1, TryReplaceWithCorpsePrefab) --a 1 frame delay in case we are loading
 		},
 
 		ontimeout = DoCorpseErode,
@@ -2820,7 +2858,8 @@ CommonStates.AddLunarRiftMutationStates = function(states, timelines, anims, fns
 end
 
 local function oncorpsedeathanimover(inst)
-    if inst.AnimState:AnimDone() and EntityHasCorpse(inst) then
+    local is_corpsing = inst.components.health ~= nil and inst.components.health.is_corpsing or nil
+    if inst.AnimState:AnimDone() and is_corpsing then
         inst.sg:GoToState("corpse")
     end
 end
@@ -2874,3 +2913,63 @@ CommonStates.AddParasiteReviveState = function(states)
         },
     })
 end
+
+--------------------------------------------------------
+
+-- Gestalt chassis possess common states
+
+local function onpossesschassis(inst, data)
+    if not inst.sg:HasStateTag("busy") then
+        inst.sg:GoToState("possess_chassis", data.target)
+    end
+end
+
+CommonHandlers.OnPossessChassis = function()
+    return EventHandler("possess_chassis", onpossesschassis)
+end
+
+CommonStates.AddPossessChassisState = function(states, anim, possess_frame_timing, fns)
+    fns = fns or {}
+
+    table.insert(states, State{
+        name = "possess_chassis",
+        tags = { "busy", "noattack", "jumping" },
+
+        onenter = function(inst, target)
+            inst.components.locomotor:Stop()
+            inst.AnimState:PlayAnimation(FunctionOrValue(anim, inst))
+            inst.SoundEmitter:PlaySound("rifts5/gestalt_evolved/melt")
+			inst:ForceFacePoint(target.Transform:GetWorldPosition())
+			inst.sg.statemem.target = target
+
+            if fns.onenter ~= nil then
+                fns.onenter(inst)
+            end
+		end,
+
+        timeline =
+        {
+            FrameEvent(possess_frame_timing, function(inst)
+                local isplanar = inst.components.gestaltcapturable and inst.components.gestaltcapturable:GetIsPlanar()
+				if inst.sg.statemem.target:TryToSpawnPossessedBody(isplanar, true) then
+					inst.persists = false
+				end
+			end),
+        },
+
+        events =
+        {
+			EventHandler("animover", function(inst)
+				if inst.AnimState:AnimDone() then
+					if inst.persists then
+						inst.sg:GoToState("idle")
+					else
+						inst:Remove()
+					end
+				end
+			end),
+        },
+    })
+end
+
+--------------------------------------------------------

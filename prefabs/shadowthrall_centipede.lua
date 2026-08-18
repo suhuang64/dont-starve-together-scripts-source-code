@@ -65,6 +65,10 @@ local function OnOtherCollide(inst, other)
         RECENTLY_CHARGED[other] = true
         ShakeAllCameras(CAMERASHAKE.SIDE, 0.5, .01, r, inst, 40)
         inst:DoTaskInTime(CLEAR_DELAY, ClearRecentlyCharged, other)
+		if other.components.rider and other.components.rider.mount then
+			RECENTLY_CHARGED[other.components.rider.mount] = true
+			inst:DoTaskInTime(CLEAR_DELAY, ClearRecentlyCharged, other.components.rider.mount)
+		end
         --inst.SoundEmitter:PlaySound("dontstarve/creatures/rook/explo")
         inst.components.combat:DoAttack(other)
         other:PushEvent("knockback", { knocker = inst, radius = 1.5, strengthmult = 1.5, forcelanded = true })
@@ -312,6 +316,9 @@ local function headfn()
     end
 
     inst.scrapbook_anim = "scrapbook"
+	inst.scrapbook_maxhealth = TUNING.SHADOWTHRALL_CENTIPEDE.HEALTH
+	inst.scrapbook_speechname = "shadowthrall_centipede"
+	inst.scrapbook_speechstatus = "BODY"
 
     --TODO do sleep and create a number of segments when waking as simulation of how much miasma we've eaten
     inst:SetBrain(head_brain)

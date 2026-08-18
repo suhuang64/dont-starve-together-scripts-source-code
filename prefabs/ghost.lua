@@ -15,13 +15,10 @@ local function OnDeath(inst)
     inst.components.aura:Enable(false)
 end
 
-local GHOSTLYFRIEND_AURA_SAFE_TAGS = {"abigail", "ghostlyfriend", "ghost_ally"}
 local function AuraTest(inst, target)
-    if inst.components.combat:TargetIs(target) or (target.components.combat.target ~= nil and target.components.combat:TargetIs(inst)) then
-        return true
-    else
-        return not target:HasAnyTag(GHOSTLYFRIEND_AURA_SAFE_TAGS)
-    end
+	return inst.components.combat:TargetIs(target)
+		or target.components.combat:TargetIs(inst)
+		or not target:HasAnyTag("abigail", "ghostlyfriend", "ghost_ally")
 end
 
 local function OnAttacked(inst, data)
@@ -155,7 +152,7 @@ local function target_test(inst, target, pvp_enabled)
     end
 
     local target_combat_target_leader = (target_combat_target.components.follower ~= nil
-        and target_combat_target.components.follower.leader) or nil
+        and target_combat_target.components.follower:GetLeader()) or nil
     if target_combat_target_leader then
         if (target_combat_target_leader.isplayer and not pvp_enabled) or target_combat_target_leader:HasAnyTag(GUARD_AURA_SAFE_TAGS) then
             return false
@@ -165,9 +162,8 @@ local function target_test(inst, target, pvp_enabled)
     return target:HasAnyTag(GUARD_AURA_UNSAFE_TAGS) and not target:HasAnyTag(GUARD_AURA_SAFE_TAGS)
 end
 
-local TARGET_ONEOF_TAGS = { "character", "hostile", "monster", "smallcreature" }
 local function GuardAuraTest(inst, target)
-    return target:HasAnyTag(TARGET_ONEOF_TAGS) and target_test(inst, target)
+	return target:HasAnyTag("character", "hostile", "monster", "smallcreature") and target_test(inst, target)
 end
 
 local function GuardKeepTargetFn(inst, target)

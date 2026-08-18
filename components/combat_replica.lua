@@ -89,6 +89,11 @@ function Combat:GetAttackRangeWithWeapon()
         or self._attackrange:value()
 end
 
+function Combat:GetWeaponAttackRange()
+    local weapon = self:GetWeapon()
+    return weapon and weapon.replica.inventoryitem:AttackRange() or 0
+end
+
 function Combat:GetWeapon()
     if self.inst.components.combat ~= nil then
         return self.inst.components.combat:GetWeapon()
@@ -255,7 +260,11 @@ function Combat:CanLightTarget(target, weapon)
 		and not target:HasAnyTag("fire", "burnt")
 end
 
+--@V2C: WARNING!  This doesn't match combat component's version.  Why is this needed on clients anyway?
 function Combat:CanHitTarget(target)
+	print("WARNING: combat_replica::CanHitTarget is deprecated; no client-safe support for this.")
+	assert(BRANCH ~= "dev")
+
     if self.inst.components.combat ~= nil then
         return self.inst.components.combat:CanHitTarget(target)
     elseif self.classified ~= nil
@@ -314,37 +323,70 @@ function Combat:CanTarget(target)
         and (rider == nil or (not rider:IsRiding() or (not rider:GetMount():HasTag("peacefulmount") or is_ranged_weapon)))
 end
 
-function Combat:IsAlly(guy)
+function Combat:CanBeAlly(guy)
     if guy:HasTag("alwayshostile") then
         return false
     end
 
-    if guy == self.inst or
-        (self.inst.replica.follower ~= nil and guy == self.inst.replica.follower:GetLeader()) then
-        --It's me! or it's my leader
-        return true
+    if guy == self.inst then
+        return true -- It's me.
     end
 
-    local follower = guy.replica.follower
-    local leader = follower ~= nil and follower:GetLeader() or nil
-    --It's my follower
-    --or I'm a player and it's a companion (or following another player in non PVP)
-    --unless it's attacking me
-    return self.inst == leader
-		or (    self.inst.isplayer and
-                (   guy:HasTag("companion") or
-                    (   leader ~= nil and
-                        not TheNet:GetPVPEnabled() and
-						leader.isplayer
-                    )
-                ) and
-                (   guy.replica.combat == nil or
-                    guy.replica.combat:GetTarget() ~= self.inst
-                )
-            )
+	local follower = self.inst.replica.follower
+	local myleader = follower and follower:GetLeader()
+    if myleader and guy == myleader then
+        return true -- It's my leader.
+    end
+
+	local guy_follower = guy.replica.follower
+	local theirleader = guy_follower and guy_follower:GetLeader()
+    if self.inst == theirleader then
+        return true -- It's my follower.
+    end
+
+    if myleader and myleader == theirleader then
+        return true -- Same leader we should be friends.
+    end
+
+	-- Are we player aligned?
+	if self.inst.isplayer or
+		self.inst.bedazzled or
+		(myleader and (myleader.isplayer or myleader.replica.inventoryitem)) or
+		self.inst:HasAnyTag("player_aligned", "domesticated", "saltlicker_salted")
+	then
+		if guy.bedazzled or
+			guy:HasTag("companion") or
+			(theirleader and theirleader.replica.inventoryitem)
+		then
+			return true -- Consider it aligned to all players.
+		end
+
+		if not TheNet:GetPVPEnabled() then
+			if guy.isplayer or (theirleader and theirleader.isplayer) then
+				return true -- They're aligned to another player.
+			end
+
+			if guy:HasAnyTag("player_aligned", "domesticated", "saltlicker_salted") then
+				return true -- No current leader, but still considered aligned to players.
+			end
+		end
+	end
+
+	return false
 end
 
+function Combat:IsAlly(guy)
+	if not self:CanBeAlly(guy) then
+		return false
+	end
+	local guy_combat = guy.replica.combat
+	return guy_combat == nil or guy_combat:GetTarget() ~= self.inst
+end
+
+--V2C: *deprecated* use similar functions IsAlly/CanBeAlly instead
 function Combat:TargetHasFriendlyLeader(target)
+	assert(BRANCH ~= "dev", "Deprecated! Use IsAlly/CanBeAlly.")
+
     local leader = self.inst.replica.follower ~= nil and self.inst.replica.follower:GetLeader()
     if leader ~= nil then
         local target_leader = target.replica.follower ~= nil and target.replica.follower:GetLeader() or nil
@@ -361,12 +403,11 @@ function Combat:TargetHasFriendlyLeader(target)
 
         return leader == target
 				or (target_leader ~= nil and (target_leader == leader or (target_leader.isplayer and not PVP_enabled)))
-				or (target:HasTag("domesticated") and not PVP_enabled)
+				or (target:HasAnyTag("player_aligned", "domesticated") and not PVP_enabled)
     end
 
     return false
 end
-
 
 function Combat:CanBeAttacked(attacker)
 	if self.inst:HasAnyTag("playerghost", "flight") or
@@ -402,7 +443,7 @@ function Combat:CanBeAttacked(attacker)
                     local leader = follower:GetLeader()
                     if leader ~= nil and
                         leader ~= self._target:value() and
-						leader.isplayer then
+						leader.isplayer and not attacker:HasTag("alwayshostile") then
                         local combat = attacker.replica.combat
                         if combat ~= nil and combat:GetTarget() ~= self.inst then
                             --Follower check
@@ -411,8 +452,6 @@ function Combat:CanBeAttacked(attacker)
                     end
                 end
             end
-        --elseif self.inst:HasAllTags("buzzard", "lunar_aligned") and attacker:HasTag("lunar_aligned") then
-        --    return false
         end
 
 		sanity = attacker.replica.sanity

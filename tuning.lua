@@ -147,9 +147,9 @@ function Tune(overrides)
         WX78_MAX_HUNGER = 200,
         WX78_MAX_SANITY = 300,
 
-        WX78_HEALTH = 125,
-        WX78_HUNGER = 125,
-        WX78_SANITY = 150,
+        WX78_HEALTH = 100,
+        WX78_HUNGER = 100,
+        WX78_SANITY = 100,
 
         HAMMER_LOOT_PERCENT = .5,
         BURNT_HAMMER_LOOT_PERCENT = .25,
@@ -201,7 +201,7 @@ function Tune(overrides)
         BLUEAMULET_FUEL = total_day_time * 0.75,
         BLUEGEM_COOLER = -20,
 
-        PURPLEAMULET_FUEL = total_day_time * 0.4,
+        PURPLEAMULET_FUEL = seg_time * 8,
 
         YELLOWAMULET_FUEL = total_day_time,
         YELLOWSTAFF_USES = 20,
@@ -592,18 +592,22 @@ function Tune(overrides)
         KNIGHT_DAMAGE = 40,
         KNIGHT_HEALTH = 300 * 3, -- harder for multiplayer
         KNIGHT_ATTACK_PERIOD = 2,
+		KNIGHT_ATTACK_RANGE = 2.5,
+		KNIGHT_HIT_RANGE = 2.75,
         KNIGHT_WALK_SPEED = 5,
         KNIGHT_TARGET_DIST = 10,
 		KNIGHT_DODGE_HIT_RECOVERY = 2,
 
         BISHOP_DAMAGE = 40,
+		BISHOP_INSULATED_DAMAGE_MULT = 0.5,
         BISHOP_HEALTH = 300 * 3, -- harder for multiplayer
         BISHOP_ATTACK_PERIOD = 4,
-        BISHOP_ATTACK_DIST = 6,
+		BISHOP_ATTACK_DIST = 8,
         BISHOP_WALK_SPEED = 5,
         BISHOP_TARGET_DIST = 12,
 
-        ROOK_DAMAGE = 45,
+		ROOK_DAMAGE = 90,
+		ROOK_DAMAGE_PLAYER_PERCENT = 0.5,
         ROOK_HEALTH = 300 * 3, -- harder for multiplayer
         ROOK_ATTACK_PERIOD = 2,
         ROOK_WALK_SPEED = 5,
@@ -1353,6 +1357,11 @@ function Tune(overrides)
                 PERDOFFERING = 1,
             }),
 
+            KNIGHTSHRINE = TechTree.Create({
+                KNIGHTOFFERING = 3,
+                PERDOFFERING = 1,
+            }),
+
             MADSCIENCE = TechTree.Create({
                 MADSCIENCE = 1,
             }),
@@ -1446,6 +1455,14 @@ function Tune(overrides)
 
             CARPENTRY_STATION_STONE = TechTree.Create({
                 CARPENTRY = 3,
+            }),
+
+            VAULT_REFINER_PEDESTAL = TechTree.Create({
+                VAULT_REFINE = 1,
+            }),
+
+            CARNIVALGAME_GOLFGAME = TechTree.Create({
+                CARNIVAL_GOLFPROPS = 1,
             }),
 		},
 
@@ -1708,6 +1725,7 @@ function Tune(overrides)
         SPIDERHAT_RANGE = 12,
         ONEMANBAND_PERISHTIME = 6*seg_time,
         ONEMANBAND_RANGE = 12,
+        ONEMANBAND_MAXFOLLOWERS = 10,
         HEATROCK_NUMUSES = 8,
 
         GRASS_UMBRELLA_PERISHTIME = 2*total_day_time*perish_warp,
@@ -3605,6 +3623,9 @@ function Tune(overrides)
 
 		WINTERS_FEAST_OVEN_BASE_COOK_TIME = night_time*.3333,
 
+        WINTERS_FEAST_BASIC_ORNAMENT_DROP_CHANCE = 0.005,
+        WINTERS_FEAST_WINTER_FOOD_DROP_CHANCE = 0.20,
+
         FIRECRACKERS_STARTLE_RANGE = 10,
         REDLANTERN_LIGHTTIME = total_day_time * 12,
         REDLANTERN_RAIN_RATE = .25,
@@ -3683,6 +3704,8 @@ function Tune(overrides)
 		WINONA_STORAGE_ROBOT_FOOTPRINT = 1,
 		WINONA_STORAGE_ROBOT_POWER_LOAD_CHARGING = 0.1,
 		WINONA_STORAGE_ROBOT_LOW_FUEL_PCT = 0.02,
+
+		WINONA_WXBATTERY_COST = { fuel = total_day_time / 3 + 0.00001, shard = 1 },
 
         WINONA_BATTERY_LOW_MAX_FUEL_TIME = seg_time * 6,
         WINONA_BATTERY_LOW_FUEL_RATE_MULT = .375, --changes max fuel to last 1 full day, while still only costing 2 nitre
@@ -4248,7 +4271,7 @@ function Tune(overrides)
             {
                 RANGE = 20,
                 PROJECTILE_INITIAL_HEIGHT = 1.1,
-                AIM_ANGLE_WIDTH = 90 / RADIANS, -- must be in radians
+				AIM_ANGLE_WIDTH = 90 * DEGREES, -- must be in radians
             },
 
             BOAT_MAGNET =
@@ -4620,6 +4643,7 @@ function Tune(overrides)
         WEREMOOSE_FIGHTING_DRAIN_TIME_MULTIPLIER1 = 10,
         WEREMOOSE_FIGHTING_DRAIN_TIME_DURATION = 6, --time for fighting mults to wear off
         WEREMOOSE_RUN_SPEED = 5.4, --x0.9 speed
+        WEREMOOSE_TACKLE_SPEED = 12,
         WEREMOOSE_ABSORPTION = .9,
         WEREMOOSE_DAMAGE = wilson_attack * 1.75,
 
@@ -5837,6 +5861,8 @@ function Tune(overrides)
 
         TREEGROWTH_NUTRIENTS            = {  8, 32,  8 },
 
+        WX78_FOODBRICK_NUTRIENTS        = {  0, 32,  0 },
+
 		WORMWOOD_MANURE_HEAL_VALUES = { 2, 3, 8, 12 },
 
 		WORMWOOD_COMPOST_HEAL_VALUES = { 4, 6, 8, 32 },
@@ -6035,13 +6061,13 @@ function Tune(overrides)
         MUSHGNOME_MAX_CHILDREN = 1,
         MUSHGNOME_ENABLED = true,
 
-        NIGHTMARELIGHT_RELEASE_TIME = 5,
-        NIGHTMARELIGHT_REGEN_TIME = seg_time,
+        NIGHTMARELIGHT_RELEASE_TIME = seg_time,
+        NIGHTMARELIGHT_REGEN_TIME = 5,
         NIGHTMARELIGHT_MINCHILDREN = 1,
         NIGHTMARELIGHT_MAXCHILDREN = 2,
         NIGHTMARELIGHT_ENABLED = true,
-        NIGHTMAREFISSURE_RELEASE_TIME = 5,
-        NIGHTMAREFISSURE_REGEN_TIME = seg_time,
+        NIGHTMAREFISSURE_RELEASE_TIME = seg_time,
+        NIGHTMAREFISSURE_REGEN_TIME = 5,
         NIGHTMAREFISSURE_MAXCHILDREN = 1,
         NIGHTMAREFISSURE_ENABLED = true,
 
@@ -6540,7 +6566,7 @@ function Tune(overrides)
         RUINS_CAVEIN_OBSTACLE_FALL_DAMAGE = 40,
 
         -- WX78 Refresh
-        WX78_MAXELECTRICCHARGE = 6,
+        WX78_MAXELECTRICCHARGE = 6, -- Deprecated, use WX78_INITIAL_MAXCHARGELEVEL
         WX78_MINACCEPTABLEMOISTURE = 15,
         WX78_HUNGRYCHARGEDRAIN_TICKTIME = 300 * FRAMES,
         WX78_CHARGE_REGENTIME = 3*seg_time,
@@ -6556,7 +6582,7 @@ function Tune(overrides)
         WX78_MIN_MOISTURE_DAMAGE = -0.60,     -- Damage per second
         WX78_PERCENT_MOISTURE_DAMAGE = -1.2,
 
-        WX78_MAXHEALTH_BOOST = 50,
+        WX78_MAXHEALTH_BOOST = 40,
 
         WX78_MAXSANITY1_BOOST = 40,
 
@@ -6576,14 +6602,17 @@ function Tune(overrides)
         WX78_COLD_ICEMOISTURE = 94, -- Kind of 95; the moisture badge presentation makes this work better.
         WX78_COLD_ICECOUNT = 2,
 
-        WX78_PERISH_COLDRATE = 0.75,
-        WX78_PERISH_HOTRATE = 1.25,
+        WX78_PERISH_COLDRATE = 0.75, -- Deprecated for WX78_PERISH_RATE_MODULELEAN.
+        WX78_PERISH_HOTRATE = 1.25, -- Deprecated for WX78_PERISH_RATE_MODULELEAN.
 
-        WX78_TASERDAMAGE = 20,
+        WX78_PERISH_RATE_MODULELEAN = 0.25,
 
-        WX78_LIGHT_BASERADIUS = 3.5,
-        WX78_LIGHT_EXTRARADIUS = 1.5,
+        WX78_TASERDAMAGE = 20, -- This causes a chain stun to nearby targets when the primary target is damaged.
 
+        WX78_LIGHT_BASERADIUS = 3.5, -- Deprecated.
+        WX78_LIGHT_EXTRARADIUS = 1.5, -- Deprecated.
+
+        -- Depracated ranges, these were used inconsistently together...
         WX78_MUSIC_TENDRANGE = 12,
         WX78_MUSIC_AURADSQ = 256,
         WX78_MUSIC_UPDATERATE = 144*FRAMES,
@@ -6593,9 +6622,9 @@ function Tune(overrides)
         WX78_BEE_TICKPERIOD = seg_time,
         WX78_BEE_HEALTHPERTICK = 5.0,
 
-        WX78_MAXHEALTH2_MULT = 3.0, -- A multiplier on WX78_MAXHEALTH_BOOST
+        WX78_MAXHEALTH2_MULT = 2.5, -- A multiplier on WX78_MAXHEALTH_BOOST
 
-        WX78_CHARGING_FOODS = {
+        WX78_CHARGING_FOODS = { -- Deprecated. Set edible.chargevalue instead.
             voltgoatjelly = 1,
             voltgoatjelly_spice_chili = 1,
             voltgoatjelly_spice_garlic = 1,
@@ -7421,6 +7450,150 @@ function Tune(overrides)
                 ALLEGIANCE_VS_LUNAR_BONUS = 1.1,
                 VOIDCLOTHSCYTHE_AOE_RANGE = 2.5,
             },
+
+            WX78 = {
+                -- wx78_circuitry_betterunplug
+                HALF_MODULE_CONSUMPTION = .5,
+                -- wx78_circuitry_bettercharge
+                FASTER_CHARGE_MULTIPLIER = 2.5,
+                SAVE_CHARGE_ON_UNPLUG = 1,
+                -- wx78_circuitry_alphabuffs_1
+                MAXHUNGER_SLOWPERCENT_ALPHABUFF = 0.75,
+                MAXHUNGER1_SLOWPERCENT_ALPHABUFF = 0.95,
+                MAXSANITY1_SANITY_MOD_ALPHABUFF = 0.8,
+                MAXSANITY_SANITY_MOD_ALPHABUFF = 0.5,
+                -- wx78_circuitry_alphabuffs_2
+                MAXHEALTH_ARMOR_ALPHABUFF_2 = 0.025,
+                MAXHEALTH2_ARMOR_MULT = 2,
+                MAXHUNGER_SLOWPERCENT_ALPHABUFF_2 = 0.70,
+                MAXHUNGER1_SLOWPERCENT_ALPHABUFF_2 = 0.90,
+                MAXSANITY1_DAPPERNESS_MULT = 0.10,
+                MAXSANITY_DAPPERNESS_MULT = 0.30,
+                BEE_SHIELD_REGEN_PER_SECOND = 0.25,
+                BEE_SHIELDPERCENT = 0.2, -- how much shield dependant on max health.
+
+                -- wx78_circuitry_betabuffs_1
+                COLD_FIRE_DAMAGE_SCALE = 0.5, -- 50% per module
+                HEAT_FREEZE_RESISTANCE = 2, -- 2x per module resistance to freezing (immune to freezing at 2 fire circuits)
+                MUSIC_MAXFOLLOWERS = 10, -- 10 max followers per module
+
+                RADAR_ZAPDRONERANGE = 5,
+                RADAR_SCOUTDRONERANGE = 100,
+                RADAR_WX78_SCANNER_SCANDIST = .65, -- how close the scanner needs to be
+                RADAR_WX78_SCANNER_PLAYER_PROX = .8, -- how close the player needs to be.
+                RADAR_WAGPUNKRANGE = 6,
+                SHADOWDRONE_HARVESTER_FINDITEM_RADIUS_RADAR = 1,
+				RADAR_SHADOWDRONE_DEBUFFER_SCAN_RANGE = 0.15,
+
+                -- wx78_circuitry_betabuffs_2
+                TASER_MAXBUILDUP = 100,
+                TASER_BUILDUP_GAIN_RATE = 5,
+                TASER_BUILDUP_DRAIN_RATE_BASE = -6,
+                TASER_BUILDUP_DRAIN_BUFFER_TIME = 4,
+                TASER_BUILDUP_DAMAGE = 50, -- Remember that electric damage and wetness mult apply to this.
+                TASER_BUILDUP_RADIUS = 2,
+                TASER_EFFECT_BASE_TIME = 14,
+                TASER_EFFECT_VAR_TIME = 2,
+                TASER_EFFECT_DURATION_BASE_TIME = 1.5,
+                TASER_EFFECT_DURATION_VAR_TIME = 0.5,
+
+                TASER_BUILDUP_GAIN_RATE_MULT_PER_MODULE = 1/3,
+                TASER_BUILDUP_DRAIN_RATE_ADD_PER_MODULE = 1, -- lower base drain rate with each taser module
+                TASER_BUILDUP_RADIUS_PER_MODULE = 1,
+                -- wx78_circuitry_gammabuffs_1
+                -- wx78_circuitry_gammabuffs_2
+                -- wx78_extrabody_1
+                BACKUPBODY_WORK_REQUIRED = 3,
+                -- wx78_extrabody_2
+                -- wx78_extrabody_3
+                -- wx78_remotebodyswap
+                REMOTEBODYSWAP_DETECTION_RADIUS = 20,
+				MAPSCOUTSELECT_DETECTION_RADIUS = 10,
+                -- wx78_scoutdrone_1
+                SCOUTDRONE_MAX_COUNT = 2,
+                SCOUTDRONE_SPEED = 3,
+                SCOUTDRONE_RANGE = 200,
+                -- wx78_extradronerange
+                WX78_SCANNER_RANGE_BONUS = 3, -- This is equivalent to 3 radar boosters.
+                SCOUTDRONE_RANGE_BONUS = 300,
+                ZAPDRONE_RANGE_2 = 30,
+                SHADOWDRONE_HARVESTER_FINDITEM_RADIUS_SKILLBOOST = 3, -- 3 radar boosts
+				SHADOWDRONE_DEBUFFER_SCAN_RANGE_SKILLBOOST = 0.45, -- 3 radar boosts
+                -- wx78_deliverydrone_1
+                DELIVERYDRONE_SPEED = 30,
+                -- wx78_deliverydrone_2
+                -- wx78_zapdrone_1
+                ZAPDRONE_SPEED = 7,
+				ZAPDRONE_DAMAGE = 30,
+				ZAPDRONE_INSULATED_DAMAGE_MULT = 0.5,
+				ZAPDRONE_AGGRO_RANGE = 15,
+				ZAPDRONE_SHARE_TARGET_RANGE = 20, --share target to possessed bodies if target was within this range to me
+				ZAPDRONE_USES = 100,
+				ZAPDRONE_USE_PER_ATTACK_1 = 2,
+				ZAPDRONE_RANGE_1 = 15,
+                -- wx78_zapdrone_2
+				ZAPDRONE_USE_PER_ATTACK_2 = 1,
+
+                -- wx78_allegiance_lunar
+                ALLEGIANCE_LUNAR_RESIST = 0.9,
+                ALLEGIANCE_VS_SHADOW_BONUS = 1.1,
+                POSSESSEDBODY_TARGET_DIST = 10,
+
+                POSSESSEDBODY_LUNAR_RESIST = 0.9,
+                POSSESSEDBODY_VS_SHADOW_BONUS = 1.1,
+                POSSESSEDBODY_NEGATIVE_SANITY_AURA_MODIFIER = 2 / 3,
+                POSSESSEDBODY_DAMAGE_MULT = 0.5,
+                POSSESSEDBODY_PLANAR_DAMAGE_MULT = 0.5,
+                POSSESSEDBODY_PLANAR_SHADOW_DAMAGE_MULT = 0.25,
+
+                PLANARPOSSESSEDBODY_NEGATIVE_SANITY_AURA_MODIFIER = 1 / 3,
+                PLANARPOSSESSEDBODY_DAMAGE_MULT = 0.5,
+                PLANARPOSSESSEDBODY_PLANAR_DAMAGE_MULT = 1,
+                PLANARPOSSESSEDBODY_PLANAR_SHADOW_DAMAGE_MULT = 0.5,
+
+                -- wx78_allegiance_shadow
+                ALLEGIANCE_SHADOW_RESIST = 0.9,
+                ALLEGIANCE_VS_LUNAR_BONUS = 1.1,
+                -- SOCKETQUALITY.LOW == nightmarefuel
+                -- drones
+                SHADOWDRONE_FOLLOW_RADIUS = 4,
+                SHADOWDRONE_HARVESTER_PASSIVE_TICK_PERIOD = 1.5,
+                --
+                SHADOWDRONE_HARVESTER_LIMIT = 2,
+                SHADOWDRONE_HARVESTER_SPEED = 6,
+                SHADOWDRONE_HARVESTER_FINDITEM_RADIUS = 6,
+                --
+                SHADOWDRONE_HARVESTER_SPEED_BOOSTED = 8,
+                SHADOWDRONE_HARVESTER_LIMIT_BOOSTED = 4,
+                SHADOWDRONE_HARVESTER_FINDITEM_RADIUS_BOOSTED = 10,
+                --
+                SHADOWFUEL_DEBUFF_TIME = 20,
+                HORRORFUEL_DEBUFF_TIME = 60,
+                -- SOCKETQUALITY.MEDIUM == purehorror
+                -- SOCKETQUALITY.HIGH == shadowheart
+                -- drones
+                SHADOWDRONE_DEBUFFER_LIMIT = 3,
+				SHADOWDRONE_DEBUFFER_WALKSPEED = 6,
+				SHADOWDRONE_DEBUFFER_RUNSPEED = 7.5,
+				SHADOWDRONE_DEBUFFER_SCAN_RANGE = 3,
+				SHADOWDRONE_DEBUFFER_SCAN_RANGE_MAX = 4.5,
+                --
+                SHADOWDRONE_DEBUFFER_LIMIT_BOOSTED = 4,
+				SHADOWDRONE_DEBUFFER_RUNSPEED_BOOSTED = 9,
+                --
+                SHADOWDRONE_DAMAGEMULT_PER_DRONE = 0.06,
+                -- vein harvests
+                SHADOWHEART_WORK_NEEDED = 2,
+                SHADOWHEART_SPAWN_PERIOD = seg_time * 4,
+                SHADOWHEART_SPAWN_VARIANCE = seg_time,
+                SHADOWHEART_SPAWN_DENSITY_RANGE = 6,
+                SHADOWHEART_SPAWN_DENSITY_MAX = 4,
+                -- SOCKETQUALITY.PERFECT == mimicheart
+                MIMICHEART_SPAWN_PERIOD = total_day_time,
+                MIMICHEART_SPAWN_VARIANCE = seg_time * 2,
+                MIMICHEART_SPAWN_DENSITY_RANGE = 8,
+                MIMICHEART_SPAWN_DENSITY_MAX = 2,
+            }
         },
 
         WILSON_BEARD_BITS ={
@@ -8082,6 +8255,7 @@ function Tune(overrides)
         SALTLICK_IMPROVED_MAX_LICKS = 480, -- 30 days @ 8 beefalo licks per day (self / (SALTLICK_DURATION * SALTLICK_BEEFALO_USES))
 
         BOATLEAK_PLUG_WETNESS = 1,
+        BOATLEAK_PLUG_WETNESS_INVENTORYITEM = 5,
 
         BOAT_LEAK_PLUGGED_TIME = 20,
         BOAT_LEAK_PLUGGED_TIME_VARIANCE = 5,
@@ -8852,11 +9026,11 @@ function Tune(overrides)
 
         RIFT_BIRD_MIGRATE_TIME_MOONPHASE_FACTOR =
         {
-            ["new"] = 1 / (5 / 3), -- 1.667
-            ["quarter"] = 1 / (4 / 3), -- 1.334
+            ["new"] = 0.6,
+            ["quarter"] = 0.75,
             ["half"] = 1,
-            ["threequarter"] = 1 / 0.5, -- 2x
-            ["full"] = 1 / 0.25, -- 4x
+            ["threequarter"] = 1.25,
+            ["full"] = 1.5,
         },
 
         RIFT_BIRD_MIGRATE_TIME_NON_NIGHT_FACTOR = 1 / 1.5,
@@ -8868,15 +9042,27 @@ function Tune(overrides)
         MUTATEDBUZZARD_ENTER_MIGRATION_ON_SLEEP_TIME = 20,
         MUTATEDBUZZARD_MAX_TARGET_COUNT = 3, -- 3 buzzards can share a target, the rest should EAT!
 
-        MUTATEDBUZZARD_FLAMETHROWER_DAMAGE = 20,
-        MUTATEDBUZZARD_FLAMETHROWER_PLANAR_DAMAGE = 15,
+        MUTATEDBUZZARD_FLAMETHROWER_DAMAGE = 15,
+        MUTATEDBUZZARD_FLAMETHROWER_PLANAR_DAMAGE = 10,
 
-        -- Kill buzzards in the hail level between 27 and 32
-        BUZZARDSPAWNER_KILL_BUZZARDS_LUNAR_HAIL_BASE = 27,
-        BUZZARDSPAWNER_KILL_BUZZARDS_LUNAR_HAIL_VAR = 5,
+        MUTATEDBUZZARD_MEGAFLARE_NODE_WEIGHT = 10,
+        MUTATEDBUZZARD_MEGAFLARE_TIME = total_day_time,
 
-        TALL_FLAMEWALL_BASE_TIME = 12,
-        TALL_FLAMEWALL_VAR_TIME = 3,
+        MUTATEDBUZZARD_DEATHATTRACTION_TIME = total_day_time * 0.5,
+        MUTATEDBUZZARD_DEATHATTRACTION_WEIGHT = 0.25,
+
+        -- Kill buzzards in the hail level between 20 and 35
+        BUZZARDSPAWNER_KILL_BUZZARDS_LUNAR_HAIL_BASE = 20,
+        BUZZARDSPAWNER_KILL_BUZZARDS_LUNAR_HAIL_VAR = 15,
+
+        BUZZARDSPAWNER_FLARE_HIT_DIST_SQ = 25 * 25,
+
+        TALL_FLAMEWALL_BASE_TIME = 2.5,
+        TALL_FLAMEWALL_VAR_TIME = 0.5,
+
+        ICED_EMBER_BASE_TIME = 11,
+        ICED_EMBER_VAR_TIME = 1,
+        ICED_EMBER_SLIPPERY_RATE = 20,
 
         SPAWN_MOON_PENGULLS = true,
         SPAWN_MUTATED_HOUNDS = true,
@@ -8914,6 +9100,9 @@ function Tune(overrides)
         NONSLIPGRITBOOSTED_NUMBER_OF_POOLS = 25,
         NONSLIPGRITBOOSTED_POOL_TIME = seg_time * 2,
 
+        DESICCANT_HELD_TEMPERATURE = 15, -- if owner isnt dry, this applies
+        DESSICANT_MIN_TEMPERATURE = 20,
+        DESSICANT_THRESHOLD_TEMPERATURE = 55,
         DESICCANT_DRY_RATE = 0.5,
         DESICCANTBOOSTED_DRY_RATE = 0.75,
         MOISTUREABSORBER_RAINED_ON_EFFICIENCY_MULT = 0.07,
@@ -9034,13 +9223,336 @@ function Tune(overrides)
 		HERMITCRAB_HOTSPRING_HAPPY_SOAK_TIME = 60,
 
         MOONSTORM_SPARKCHARGE_DEFAULT = 0.1,
-        NIGHTSTICK_SPARKCHARGE = 0.25,
-        NIGHTSTICK_BATTERYCHARGE = 1.0,
 
         WINTERSURPRISE_SPAWN_DELAY = total_day_time * 2,
         WINTERSURPRISE_SPAWN_DELAY_VARIANCE = total_day_time * 1,
         WINTERSURPRISE_MAX_SPAWNS = 3,
         SPAWN_WINTERSURPRISE = true,
+
+		RETURN_ITEM_TO_FEEDER_RANGE = 4,
+
+        -- Year of the Clockwork Knight
+
+        YOTH_CHARLIE_STAGE_RESET_TIME = total_day_time*2,
+        YOTH_CHARLIE_STAGE_RESET_TIME_VARIABLE = total_day_time*1,
+
+        YOTH_KNIGHT_ATTACK_PERIOD = 2,
+        YOTH_KNIGHT_DAMAGE = 40,
+        YOTH_KNIGHT_HEALTH = 300 * 3, -- harder for multiplayer
+		YOTH_KNIGHT_JOUST_RANGE = { min = 6, max = 14 },
+        YOTH_KNIGHT_WALK_SPEED = 5,
+		YOTH_KNIGHT_JOUST_SPEED = 8,
+        YOTH_KNIGHT_TARGET_DIST = 20,
+        YOTH_KNIGHT_TIME_TO_FLEE = 2,
+        YOTH_KNIGHT_FLEE_RADIUS = ENTITY_POPOUT_RADIUS / 2,
+        YOTH_KNIGHT_MAX_CHASE_TIME = 5,
+        -- the knights armor
+        YOTH_KNIGHT_DAMAGE_TAKEN_MULT_PLAYER = 0.8,
+        YOTH_KNIGHT_DAMAGE_TAKEN_MULT = 0.15,
+
+        YOTH_PRINCESS_SUMMON_COOLDOWN = total_day_time * 3,
+
+        YOTH_LANCE_ATTACK_DAMAGE = wilson_attack * 1.5,
+        YOTH_LANCE_CHARGE_DAMAGE = wilson_attack * 2,
+        YOTH_LANCE_USES = 200,
+        YOTH_LANCE_JOUST_SPEED = 10,
+        YOTH_LANCE_LENGTH = 2,-- Matched up to art.
+        YOTH_LANCE_RUNANIM_LOOP_COUNT = 2, -- Number of run cycles to go through.
+
+        ARMOR_YOTH_KNIGHTHAT = wilson_health*6*multiplayer_armor_durability_modifier,
+        ARMOR_YOTH_KNIGHTHAT_ABSORPTION = .9*multiplayer_armor_absorption_modifier,
+
+        ARMOR_YOTH_KNIGHT = wilson_health*8*multiplayer_armor_durability_modifier,
+        ARMOR_YOTH_KNIGHT_ABSORPTION = .9*multiplayer_armor_absorption_modifier,
+
+        MASK_PRINCESSHAT = wilson_health*1*multiplayer_armor_durability_modifier,
+        MASK_PRINCESSHAT_ABSORPTION = .6*multiplayer_armor_absorption_modifier,
+
+        COSTUME_PRINCESS_BODY = wilson_health*1*multiplayer_armor_durability_modifier,
+        COSTUME_PRINCESS_BODY_ABSORPTION = .6*multiplayer_armor_absorption_modifier,
+
+        YOTH_HECKLER_SHRINE_LEAVE_BASE = 15,
+        YOTH_HECKLER_SHRINE_LEAVE_VARIANCE = 10,
+
+        YOTH_HECKLER_SHRINE_RETURN_BASE = total_day_time,
+        YOTH_HECKLER_SHRINE_RETURN_VARIANCE = seg_time * 2,
+
+        WES_LUCK = -1,
+        YOTH_PRINCESS_SETBONUS_LUCK = -1,
+        YOTH_KNIGHT_SETBONUS_LUCK = 0.2,
+        YOTH_KNIGHT_SETBONUS_EVENT_LUCK = 1, -- 1 luck value when the event is active
+        HORSESHOE_LUCK = 0.05,
+        HORSESHOE_SETBONUS_LUCK = 0.10, -- The amount of luck from horseshoe when we have the yoth knight setbonus
+        HORSESHOE_EVENT_LUCK_MULTIPLIER = 3, -- Extra luck when the event is active.
+        BLACKCATFISH_LUCK = -0.25,
+
+        FLOATINGLANTERN_LEVELS = { 12, 9, 6, 2 }, -- These are the target heights.
+        FLOATINGLANTERN_DURATION = total_day_time * 2,
+
+        YOTH_KNIGHTSTICK_PERISHTIME = 6 * total_day_time,
+        YOTH_KNIGHTSTICK_PERISHTIME_ON_SLIP = -(6 * total_day_time * 0.01), -- 1%
+        YOTH_KNIGHTSTICK_PERISHTIME_ON_COLLIDE = -(6 * total_day_time * 0.02), -- 2%
+        YOTH_KNIGHTSTICK_MAX_GALLOPS = 30,
+        YOTH_KNIGHTSTICK_TIME_TO_GALLOP = 0.6,
+        YOTH_KNIGHTSTICK_GALLOP_HUNGER_RATE_MULT = 1.33,
+        YOTH_KNIGHTSTICK_MAX_STRESS_ROTATION = 60,
+        YOTH_KNIGHTSTICK_TRACK_ROTATION_TIME = 15 * FRAMES,
+        YOTH_KNIGHTSTICK_TRACK_ROTATION_MIN = 2,
+		YOTH_KNIGHTSTICK_SPEED_MULT = { min = 1.15, max = 1.6 },
+        YOTH_KNIGHTSTICK_WORK_COLLIDE = 0.05,
+
+        FLOATINGLANTERN_RAIN_RATE = 1.5,
+        FLOATINGLANTERN_LUNARHAIL_RATE = 35, -- Shred that paper!
+        FLOATINGLANTERN_OUT_OF_BOUNDS_RATE = 100, -- Shoo! be destroyed quick if we're out of bounds!
+
+		CLOCKWORK_HEALTH_REGEN_DELAY = 6, --seconds
+		CLOCKWORK_HEALTH_REGEN_PERIOD = 3,
+		CLOCKWORK_HEALTH_REGEN = 15,
+
+        -- Lots of old content's values pulled to tuning for luck.
+        SHADOW_TENTACLE_RUINS_BAT_CHANCE = 0.2,
+        SHADOW_TENTACLE_SLINGSHOTAMMO_CHANCE = 0.5,
+        SHADOW_TENTACLE_SLINGSHOTAMMO_EXTRA_TENTACLE_CHANCE = 0.25,
+
+        PLAYER_DROP_WET_TOOL_CHANCE_MAX = 0.15,
+
+        GHOSTLYELIXIR_EXTRA1_CHANCE = 0.4,
+        GHOSTLYELIXIR_EXTRA2_CHANCE = 0.1,
+
+        CARNIVAL_CROWKID_TOSS_REWARD_CHANCE = 0.25,
+
+        CRITTER_NUZZLE_CHANCE = 0.05,
+
+        LUNARHAIL_MUTATE_BIRD_CHANCE = 0.25, -- regular mutation
+
+        DEERCLOPS_MEGAFLARE_SPAWN_CHANCE = 0.6,
+        PIRATERAID_MEGAFLARE_SPAWN_CHANCE = 0.6,
+
+        BEARGER_MULTISHED_CHANCE = 0.2,
+
+        FEED_BIRD_POOP_CHANCE = 0.33,
+
+        BIRD_DROP_SEEDS_CHANCE_ONEYEAR = 0.8,
+        BIRD_DROP_SEEDS_CHANCE_PASTONEYEAR = 0.6,
+        BIRD_DROP_ITEM_BASE_CHANCE = 0.35,
+
+        BULLKELP_ROOT_SNAP_CHANCES =
+        {
+            HIGH = 1.0,
+            MED = 0.3,
+            LOW = 0.1,
+        },
+
+        CARNIVAL_SEEDPACKET_EXTRA_SEED_CHANCE = 0.1,
+
+        CHESSJUNK_SPAWNSCION_CHANCE = 0.1,
+
+        FARMPLANT_SPAWN_FRUITFLY_ON_WEED_CHANCE = 0.05,
+
+        SPAWN_GINGERDEADPIG_CHANCE = 0.3, -- Also comes with an extra winter feast fuel
+
+        DROP_SHADOWTHRALL_MASKHAT_CHANCE = 0.3,
+
+        MAGIC_PROTOTYPER_MAXWELL_SPAWN_RABBIT_CHANCE = 0.25,
+        MAGIC_PROTOTYPER_SPAWN_RABBIT_CHANCE = 0.1,
+
+        MALBATROSS_SPAWNFEATHER_ONATTACKED_CHANCE = 0.05,
+
+        MARBLESHRUB_MED_MARBLEBEAN_CHANCE = 0.75,
+        MARBLESHRUB_TALL_MARBLEBEAN_CHANCE = 0.5,
+
+        OASISLAKE_WETPOUCH_CHANCE = 0.6,
+
+        SHARKBOI_GIVE_WINTERLIGHTORNAMENT_CHANCE = 0.4,
+
+        SPIDERQUEEN_SPAWN_BETTER_SPIDER_CHANCE = 0.45, -- spider warrior or spider healer
+        SPIDERQUEEN_SPAWN_SPIDER_WARRIOR_CHANCE = 0.5,
+
+        STATUERUINS_SPAWN_NIGHTMARE_CHANCE = 0.3,
+
+        WALRUS_INVESTIGATE_MEGAFLARE_CHANCE = 0.6,
+
+        ALTERGUARDIAN_SPAWN_LARGE_GESTALT_PROJECTILE_CHANCE = 0.4,
+
+        BRIGHTMARE_SPAWN_INC_CHANCES =
+        {
+            HIGH = 0.4,
+            MED = 0.3,
+            LOW = 0.2,
+        },
+
+        MONKEY_FOLLOW_PLAYER_CHANCE = 0.15,
+        MONKEY_FOLLOW_PLAYER_WITH_BANANA_CHANCE = 0.6,
+        --
+
+        -- Meta 6
+
+        WX78_INITIAL_MAXCHARGELEVEL = 6,
+        WX78_MAXCHARGELEVEL_SKILL = 7,
+
+        WX78_CHARGE_SMALL = 1,
+        WX78_CHARGE_MED = 3,
+        WX78_CHARGE_LARGE = 6,
+
+        WX78_MODULE_CONSUMPTION = 1,
+
+        WX78_MUSIC_RANGE = 12,
+
+        WX78_LIGHT_RADIUS_PER_MODULE = 1.25,
+
+        WX78_WATER_THRESHOLD_ADD = 5,
+
+        WX78_RADAR_EXTRA_VIEW_DIST = 5,
+
+        WX78_SCREECH_RANGE = 12,
+        WX78_SCREECH_PANIC_TIME = 8,
+        WX78_SCREECH_TIME = 2,
+        WX78_SCREECH_TIME_VAR = FRAMES * 10,
+        WX78_SCREECH_COOLDOWN = 20,
+
+        WX78_DIGESTION_SPOILED_NEEDED = 5, -- number needed to produce the brick.
+
+        WX78_SHIELDING_ARMOR = 0.2, -- 80%
+        WX78_SHIELDING_COOLDOWN = 20,
+        WX78_SHIELDING_TOTAL_DAMAGE = 100, -- we can take 100 damage before getting knocked out the state.
+        WX78_SHIELDING_MIN_TIME_COOLDOWN = 5, -- Minimum number of time we can be in the state before going off cooldown.
+
+		WX78_SPIN_AOE_DIMINISHING = 0.5,
+		WX78_SPIN_EFFICIENCY_DECAY = 0.5,
+		WX78_SPIN_EFFICIENCY_DECAY_2 = 0, --0 mult means only 1 target costs usage per swing
+		WX78_SPIN_PICK_EFFICIENCY = 0.2, --base mult for picking
+		WX78_SPIN_RUNSPEED_MULT = 0.6, --mult of current runspeed (including any speed boosts)
+		WX78_SPIN_SLIPPERY = 6,
+		WX78_SPIN_RADIUS = 2.1,
+		WX78_SPIN_START_RANGE = 3, --for attacks, start wind-up a bit early
+		WX78_SPIN_TIME_TO_DIZZY = 8,
+		WX78_SPIN_TIME_TO_DIZZY_2 = 12,
+		WX78_SPIN_DIZZY_RECOVER_TIME = 4,
+
+        WX78_FOODBRICK_FERTILIZE = day_time*0.75,
+        WX78_FOODBRICK_SOILCYCLES = 8,
+        WX78_FOODBRICK_WITHEREDCYCLES = 0.5,
+
+		CLOCKWORK_MAX_FOLLOWING = 2, --per type
+		CLOCKWORK_MAX_FOLLOWING_CHESSFRIEND = 3,
+
+        -- Rifts 7
+
+        VAULT_ORB_REFINED_DETECTION_RADIUS = 16,
+
+        PLANTMOB_BURNTIME_MULT = 4/3,
+        PLANTMOB_FIRE_DAMAGE_SCALE = 1.25,
+
+        OCEAN_AMBIENT_TEMPERATURE_PENALTY = -50,
+        OCEAN_TEMPERATURE_PENALTY_PERCENT = 1/3, -- initial temperature level(percent between min and maxtemp) when things enter ocean
+        FLOATER_HOT_SIZZLE_THRESHOLD = .25,
+
+        FUMAROLETOOL_NUMUSES = 4,
+        FUMAROLETOOL_STARTING_TEMP = 90,
+        FUMAROLETOOL_STARTING_MOISTURE_PENALTY = 60,
+        FUMAROLETOOL_MINTEMP = 0,
+        FUMAROLETOOL_MAXTEMP = 90,
+        FUMAROLETOOL_TEMP_MODIFIER = -30,
+        FUMAROLETOOL_TEMPS = { 0, 20, 40, 60 },
+        FUMAROLETOOL_LIGHTOVERRIDES = { 0, 0, .15, .35 },
+        FUMAROLETOOL_FREEZING_DAMAGE_MULTS = { 1, 1, 1.25, 2 }, -- partially frozen
+        FUMAROLETOOL_FROZEN_DAMAGE_MULTS = { 1, 1, 1.5, 3 },
+        FUMAROLETOOL_HEATING_THRESHOLD = 5,
+        FUMAROLETOOL_HEATING_MINTHRESHOLD = 2,
+
+        -- NOTES:
+        -- AXE_USES = 100,
+        -- HAMMER_USES = 75, -- 25% less than axe
+        -- SHOVEL_USES = 25, -- quarter of axe
+        -- PITCHFORK_USES = 25, -- quarter of axe
+        -- FARM_HOE_USES = 25, -- quarter of axe
+        -- PICKAXE_USES = 33, -- third of axe
+
+        FUMAROLEAXE_HEAT_ON_USE = -0.2, -- base
+        FUMAROLEPICKAXE_HEAT_ON_USE = -0.2 * 3, -- 3x more
+        FUMAROLESHOVEL_HEAT_ON_USE = -0.2 * 4, -- 4x more
+        FUMAROLEHAMMER_HEAT_ON_USE = -0.2 * (4/3), -- 1.33x more
+        FUMAROLEHOE_HEAT_ON_USE = -0.2, -- 4x more
+
+        FUMAROLEAXE_EFFECTIVENESS = { 1, 1, 1.25, 1.5 },
+        FUMAROLEPICKAXE_EFFECTIVENESS = { 1, 1, 1.25, 1.5 },
+        FUMAROLESHOVEL_EFFECTIVENESS = { 1, 1, 1.25, 1.5 }, -- We have nothing that takes more than 1 work dig, so who knows how this should be balanced :shrug:
+        FUMAROLEHAMMER_EFFECTIVENESS = { 1, 1, 1.25, 1.5 },
+        -- no effectiveness for garden hoe!
+
+        TRAP_FUMAROLE_DAMAGE = 10, -- 10 fire damage every second
+        TRAP_FUMAROLE_MINTEMP = 0,
+        TRAP_FUMAROLE_MAXTEMP = 90,
+        TRAP_FUMAROLE_MAXTEMP_HELD = 25, -- a little under the threshold so we have time to be placed before changing threshold.
+        TRAP_FUMAROLE_TEMP_MODIFIER = -20,
+        TRAP_FUMAROLE_TEMPS = { 0, 30, 60 },
+        TRAP_FUMAROLE_LIGHTOVERRIDES = { 0, .125, .35 },
+        TRAP_FUMAROLE_IGNITE_TIME = seg_time * 0.5, -- multiplied by mult below depending on temperature stage, this also cooks stuff.
+        TRAP_FUMAROLE_IGNITE_MULTS = { 0, 0.5, 1 },
+        TRAP_FUMAROLE_MAX_IGNITE_ITEMS = 2, -- max items we can cook/ignite per tile
+        TRAP_FUMAROLE_TEMPERATURE_RATE = 3,
+        TRAP_FUMAROLE_PROPAGATOR_RATE = 25,
+
+        HEALINGSALVE_FUMAROLEBUFF_DURATION = seg_time * 4,
+
+		VAULT_PILLAR_GUARD_HEALTH = 6000,
+		VAULT_PILLAR_GUARD_DAMAGE = 150,
+		VAULT_PILLAR_GUARD_ATTACK_PERIOD = 3,
+		VAULT_PILLAR_GUARD_ATTACK_RANGE = 5,
+        VAULT_PILLAR_GUARD_HIT_RECOVERY = 2,
+		VAULT_PILLAR_GUARD_SPEED = 2.85,
+		VAULT_PILLAR_GUARD_MIN_STAGGER_TIME = 6,
+		VAULT_PILLAR_GUARD_MAX_STAGGER_TIME = 15,
+		VAULT_PILLAR_GUARD_STAGGER_DAMAGE_MULT = 1.5,
+		VAULT_PILLAR_GUARD_SPIN_CD = 16,
+		VAULT_PILLAR_GUARD_QUICKJUMP_CD = 12,
+		--for crafted ones (distances from home pt)
+		VAULT_PILLAR_GUARD_COMBAT_RANGE = 20,
+		VAULT_PILLAR_GUARD_DEAGGRO_DIST = 35,
+
+		VAULT_CRAWLER_HEALTH = 1000,
+		VAULT_CRALWER_DAMAGE = 40,
+		VAULT_CRAWLER_SPEED = 3,
+		VAULT_CRAWLER_ATTACK_PERIOD = 2,
+		VAULT_CRAWLER_ATTACK_RANGE = 1.2,
+		VAULT_CRAWLER_HIT_RANGE = 1.9,
+		VAULT_CRAWLER_HIT_ARC = 120,
+		VAULT_CRAWLER_ROLLING_SPEED = 2.5,
+
+		VAULT_SHADOW_SUPPRESSION_MULT = 0.025, --dmg mult for combat btwn guards/crawlers vs shadowcreatures
+
+        MAX_SECURITY_PULSE_FOLLOWING = 4,
+
+        VAULT_PILLAR_GUARD_PIECE_GOLD_VALUE = 15,
+        VAULT_PILLAR_GUARD_PIECE_ROCK_VALUE = 18, -- appease value for antlion, 6 days
+
+        -- Crow Carnival 2026
+        CARNIVALGAME_GOLFGAME_CAMERA_FOCUS_MIN = 11,
+		CARNIVALGAME_GOLFGAME_CAMERA_FOCUS_MAX = 11,
+
+        CARNIVALGAME_GOLFGAME_ARENA_RADIUS = 8,
+        CARNIVALGAME_GOLFGAME_DURATION = seg_time * 1.5,
+
+        CARNIVALGAME_GOLF_GAME_DIFFICULTY_SCORES =
+        {
+            ["easy"] = 5,
+            ["medium"] = 10,
+            ["hard"] = 15,
+        },
+        -- go up to a 2x mult when scoring under par
+        CARNIVALGAME_GOLFGAME_SCORE_MINMULT_UNDER_PAR = 1,
+        CARNIVALGAME_GOLFGAME_SCORE_MAXMULT_UNDER_PAR = 1.75,
+        CARNIVALGAME_GOLFGAME_SCORE_MULT_HOLE_IN_ONE = 2.5, -- 2.5x minigame score for a hole in one!
+
+		GOLF_AIM_ARC = 90 * DEGREES, --radians
+		GOLF_MAX_CHARGE_TICKS = 1.5 * 30,
+		GOLF_MIN_SPEED = 0,
+		GOLF_MAX_PUTT_SPEED = 10,
+		GOLF_MAX_SWING_SPEED = 11.99, -- NOTES(JBK): Bullet physics calculates at worst case 30 times a second and the golf ball diameter is 0.4 units meaning ball velocity should be less than 30 * 0.4 = 12 to avoid ball vs triangle mesh being able to teleport inside the mesh.
+		GOLFHOLE_SCORE_RANGE_SQ = 0.05 * 0.05, --ball will fully drop in at this dist
+		GOLFHOLE_MAX_SCORE_SPEED_SQ = 0.75 * 0.75, --ball can't score if faster than this
+		GOLFHOLE_MIN_ACCEL = 0.4, --drop force toward center of hole at outer lip
+		GOLFHOLE_MAX_ACCEL = 0.7, --max drop force toward center of hole
     }
 
     TUNING_MODIFIERS = {}

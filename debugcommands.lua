@@ -2207,12 +2207,29 @@ local function Scrapbook_IsOnCraftingFilter(filter, entry)
     return table.contains(CRAFTING_FILTERS[string.upper(filter)].recipes, entry)
 end
 
+local IS_A_DRONE =
+{
+    wx78_scanner = true,
+    wx78_scanner_item = true,
+    wx78_drone_scout = true,
+    wx78_drone_delivery = true,
+    wx78_drone_delivery_small = true,
+    wx78_drone_zap = true,
+    wx78_drone_zap_remote = true,
+    wx78_shadowdrone_debuffer = true,
+    wx78_shadowdrone_harvester = true,
+    wagdrone_rolling = true,
+    wagdrone_flying = true,
+}
+
 local function Scrapbook_DefineSubCategory(t)
     local subcat = nil
 
     local foodtype = t.components.edible ~= nil and t.components.edible.foodtype or nil
 
-    if t:HasOneOfTags({ "wall", "wallbuilder" }) then
+	if t.scrapbook_subcat then
+		subcat = t.scrapbook_subcat
+	elseif t:HasOneOfTags({ "wall", "wallbuilder" }) then
         subcat = "wall"
     elseif t.scrapbook_specialinfo == "COSTUME" then
         subcat = "costume"
@@ -2224,7 +2241,7 @@ local function Scrapbook_DefineSubCategory(t)
         subcat = "hauntedtoy"
     elseif t:HasTag("singingshell") then
         subcat = "shell"
-    elseif t:HasTag("bird") then
+    elseif t:HasAnyTag("bird", "buzzard", "tallbird", "teenbird", "smallbird", "malbatross", "moose", "mossling", "penguin") or t.prefab == "perd" then
         subcat = "bird"
     elseif t:HasAnyTag("pig", "pigtype") and not t:HasTag("manrabbit") then
         subcat = "pig"
@@ -2238,12 +2255,18 @@ local function Scrapbook_DefineSubCategory(t)
         subcat = "oceanfish"
     elseif t:HasTag("wagstafftool") then
         subcat = "wagstafftool"
+    elseif t:HasAnyTag("trap", "mine") then
+        subcat = "trap"
     elseif t:HasTag("pocketwatch") then
         subcat = "pocketwatch"
     elseif t:HasTag("groundtile") then
         subcat = "turf"
     elseif t:HasTag("backpack") then
         subcat = "backpack"
+    elseif t.components.upgrademodule then -- has to be above container
+        subcat = "upgrademodule"
+    elseif IS_A_DRONE[t.prefab] then
+        subcat = "drone"
     elseif t:HasTag("chest") or Scrapbook_IsOnCraftingFilter("CONTAINERS", t.prefab) then
         subcat = "container"
     elseif t:HasTag("battlesong") then
@@ -2252,9 +2275,9 @@ local function Scrapbook_DefineSubCategory(t)
         subcat = "elixer"
     elseif t:HasTag("farm_plant") then
         subcat = "farmplant"
-    elseif t.components.tool or t.scrapbook_subcat == "tool" then
+	elseif t.components.tool then
         subcat = "tool"
-    elseif t.components.weapon or t.scrapbook_subcat == "weapon" then
+	elseif t.components.weapon then
         subcat = "weapon"
     elseif t:HasTag("spidermutator") then
         subcat = "mutator"
@@ -2290,8 +2313,6 @@ local function Scrapbook_DefineSubCategory(t)
         subcat = "ornament"
     elseif string.find(t.prefab, "trinket") then
         subcat = "trinket"
-    elseif t.components.upgrademodule then
-        subcat = "upgrademodule"
     elseif t:HasTag("halloween_ornament") then
         subcat = "halloweenornament"
     elseif t:HasTag("spider") then
@@ -2532,6 +2553,7 @@ end
         scrapbook_sanityvalue: Sanity food value (number).
         scrapbook_scale: Scale (number).
         scrapbook_specialinfo: Entry in STRINGS.SCRAPBOOK.SPECIALINFO (string).
+		scrapbook_speechstatus: Overrides status used with speech description (string, number, or array).
         scrapbook_speechname: Entry in STRINGS.CHARACTERS.GENERIC.DESCRIBE (string).
         scrapbook_subcat: Sub-Category (string).
         scrapbook_tex: Icon texture (without .tex) (string).
@@ -2547,6 +2569,7 @@ end
 local SCRAPBOOK_IGNORE_UNLOCKABILITY =
 {
     worm_boss = true,
+    wx78_backupbody_inventory = true,
 }
 
 local SKIP_SPECIALINFO_CHECK =
@@ -2685,6 +2708,7 @@ local NOT_ALLOWED_RECIPE_TECH =
     [TechTree.Create(TECH.YOTS)] = true,
 }
 
+CREATING_SCRAPBOOK_DATA = nil
 function d_createscrapbookdata(print_missing_icons)
     if not TheWorld.state.isautumn or TheWorld.state.israining then
         -- Force the season (many entities change the build/animation during certain seasons).
@@ -2697,6 +2721,8 @@ function d_createscrapbookdata(print_missing_icons)
         scheduler:ExecuteInTime(0.05, ExecuteConsoleCommand, nil, string.format("d_createscrapbookdata(%s)", tostring(print_missing_icons or "")))
         return
     end
+
+	CREATING_SCRAPBOOK_DATA = true
 
     c_sethealth(1)
     c_setsanity(1)
@@ -2815,6 +2841,34 @@ function d_createscrapbookdata(print_missing_icons)
             print(string.format("[!!!!]  Speech Name [ %s ] isn't defined in STRINGS.CHARACTERS.GENERIC.DESCRIBE!", t.scrapbook_speechname))
         end
 
+		local speechstr = STRINGS.CHARACTERS.GENERIC.DESCRIBE[string.upper(speechname or entry)]
+
+		local speechstatus = type(t.scrapbook_speechstatus) == "string" and string.upper(t.scrapbook_speechstatus) or t.scrapbook_speechstatus or "GENERIC"
+		if speechstatus ~= "GENERIC" then
+			AddInfo("speechstatus", t.scrapbook_speechstatus)
+			if type(speechstatus) == "table" then
+				local statusstr = ""
+				for _, v in ipairs(speechstatus) do
+					if type(v) == "string" then
+						v = string.upper(v)
+						statusstr = statusstr.."."..v
+					else
+						statusstr = statusstr.."["..v.."]"
+					end
+					speechstr = type(speechstr) == "table" and speechstr[v] or nil
+				end
+				if type(speechstr) ~= "string" then
+					print(string.format("[!!!!]  Speech string STRINGS.CHARACTERS.GENERIC.DESCRIBE.%s%s isn't defined!", string.upper(t.scrapbook_speechname or entry), statusstr))
+				end
+			elseif type(speechstr) ~= "table" or speechstr[speechstatus] == nil then
+				print(string.format("[!!!!]  Speech string STRINGS.CHARACTERS.GENERIC.DESCRIBE.%s.%s isn't defined!", string.upper(t.scrapbook_speechname or entry), speechstatus))
+			end
+		elseif type(speechstr) == "table" then
+			if speechstr.GENERIC == nil and #speechstr == 0 then
+				print(string.format("[!!!!]  Speech string STRINGS.CHARACTERS.GENERIC.DESCRIBE.%s.GENERIC isn't defined!", string.upper(t.scrapbook_speechname or entry)))
+			end
+		end
+
         if t.scrapbook_inspectonseen == nil and
             t.components.inspectable == nil and
             t.components.health == nil and
@@ -2837,7 +2891,7 @@ function d_createscrapbookdata(print_missing_icons)
         local maxhealth = not t.scrapbook_hidehealth and (t.scrapbook_maxhealth or (t.components.health ~= nil and t.components.health.maxhealth)) or nil
         if maxhealth ~= nil then
             if type(maxhealth) == "table" then
-                maxhealth = string.format("%d-%d", maxhealth[1], maxhealth[2])
+				maxhealth = string.format("%d-%d", math.min(unpack(maxhealth)), math.max(unpack(maxhealth)))
             end
 
             AddInfo( "health", maxhealth )
@@ -2849,7 +2903,9 @@ function d_createscrapbookdata(print_missing_icons)
         if damage ~= nil then
             if type(damage) == "table" then
                 local mod = not t.scrapbook_ignoreplayerdamagemod and t.components.combat ~= nil and t.components.combat.playerdamagepercent or 1
-                damage = string.format("%d-%d", damage[1]*mod , damage[2]*mod)
+				local dmg1 = damage[1] * mod
+				local dmg2 = damage[2] * mod
+				damage = string.format("%d-%d", math.min(dmg1, dmg2), math.max(dmg1, dmg2))
             end
 
             if checkstring(damage) or damage > 0 then
@@ -2860,7 +2916,7 @@ function d_createscrapbookdata(print_missing_icons)
         local planardamage = t.scrapbook_planardamage or (t.components.planardamage ~= nil and t.components.planardamage.basedamage) or nil
         if planardamage ~= nil then
             if type(planardamage) == "table" then
-                planardamage = string.format("%d-%d", planardamage[1] , planardamage[2])
+				planardamage = string.format("%d-%d", math.min(unpack(planardamage)), math.max(unpack(planardamage)))
             end
 
             if checkstring(planardamage) or planardamage > 0 then
@@ -2907,7 +2963,7 @@ function d_createscrapbookdata(print_missing_icons)
                     local weapondamage = t.scrapbook_weapondamage
 
                     if type(weapondamage) == "table" then
-                        weapondamage = string.format("%d-%d", weapondamage[1] , weapondamage[2])
+						weapondamage = string.format("%d-%d", math.min(unpack(weapondamage)), math.max(unpack(weapondamage)))
                     end
 
                     if not weapondamage and type(t.components.weapon.damage) == "function" then
@@ -2944,14 +3000,22 @@ function d_createscrapbookdata(print_missing_icons)
         if t.components.finiteuses  then
             -- FIXME(JBK): This is a bad assumption for tools that have multiple uses with different use rates but will fix up most cases.
             local count = 0
-            for _ in pairs(t.components.finiteuses.consumption) do
-                count = count + 1
+            for action in pairs(t.components.finiteuses.consumption) do
+                if action ~= ACTIONS.REMOVELUNARBUILDUP and action ~= ACTIONS.TERRAFORM_REMOVE then
+                    count = count + 1
+                end
             end
 
             local rate = 1
             if count == 1 then -- Only apply the modifier for if there is one consumer type.
-                local k, v = next(t.components.finiteuses.consumption)
-                rate = v
+                local k, v
+                while true do
+                    k, v = next(t.components.finiteuses.consumption)
+                    if k ~= ACTIONS.REMOVELUNARBUILDUP and k ~= ACTIONS.TERRAFORM_REMOVE then
+                        rate = v
+                        break
+                    end
+                end
             end
 
             for _, cmpname in ipairs(scrapbook_finiteuses_useamount_modifiers) do
@@ -3592,6 +3656,8 @@ function d_createscrapbookdata(print_missing_icons)
     exporter_data_helper:write("}\n")
     exporter_data_helper:close()
 
+	CREATING_SCRAPBOOK_DATA = nil
+
     d_unlockscrapbook()
 
     ThePlayer.HUD:OpenScrapbookScreen()
@@ -3921,7 +3987,7 @@ local function GetAvgCenterOfTask(task_name, manager)
         end
     end
     --
-    return num ~= 0 and Vector3(x / num, 0, y / num) or nil
+    return num ~= 0 and Vector3(x / num, 0, y / num) or Vector3(0, 0, 0)
 end
 function d_drawworldbirdmigration()
     if not TheWorld then
@@ -3938,7 +4004,7 @@ function d_drawworldbirdmigration()
     else
         worldmigrationvisuals = {}
 
-        local manager = TheWorld.components.mutatedbirdmanager
+        local manager = TheWorld.components.migrationmanager
         local migrationmap = manager and manager:Debug_GetMigrationMap()
         if not migrationmap then
             return
@@ -3946,23 +4012,23 @@ function d_drawworldbirdmigration()
 
         local migrationpopulations = manager:Debug_GetMigrationPopulations()
 
-        for task, neighbors in pairs(migrationmap) do
+        for task, data in pairs(migrationmap) do
             local pos = GetAvgCenterOfTask(task, manager)
             worldtopology_createent(worldmigrationvisuals, pos.x, pos.z, "oceanwhirlbigportal.png", task)
 
             local i = 0
-            for bird_type, populations in pairs(migrationpopulations) do
-                i = i + 1
-                for task_name, data in pairs(populations) do
-                    if task_name == task then
-                        local str = data.current.." "..bird_type
-                        worldtopology_createent(worldmigrationvisuals, pos.x + i * 5, pos.z + i * 5, "greenmooneye.png", str)
-                        break
-                    end
-                end
-            end
+            -- for bird_type, populations in pairs(migrationpopulations) do
+            --     i = i + 1
+            --     for task_name, data in pairs(populations) do
+            --         if task_name == task then
+            --             local str = data.current.." "..bird_type
+            --             worldtopology_createent(worldmigrationvisuals, pos.x + i * 5, pos.z + i * 5, "greenmooneye.png", str)
+            --             break
+            --         end
+            --     end
+            -- end
 
-            for i, neighbor in pairs(neighbors) do
+            for neighbor in pairs(data.neighbours) do
                 local neighborpos = GetAvgCenterOfTask(neighbor, manager)
 
                 local distmod = math.ceil(math.sqrt(distsq(pos.x, pos.z, neighborpos.x, neighborpos.z)) / 8)
@@ -4404,5 +4470,648 @@ function d_tiles()
             offx = 0
             offy = offy + 2
         end
+    end
+end
+
+function d_getmigrationpopulation(migrator_type)
+    local migrationpopulations = TheWorld.components.migrationmanager:Debug_GetMigrationPopulations()
+    if migrationpopulations[migrator_type] then
+        return migrationpopulations[migrator_type].populations
+    end
+end
+
+function d_hidehovertext()
+	local controls = ThePlayer and ThePlayer.HUD and ThePlayer.HUD.controls
+	local hover = controls and controls.hover
+	if hover then
+		hover.forcehide = true
+		hover:Hide()
+
+		--in case we are unforcehidden, like coming out of mapscreen
+		if not hover._d_forcehide then
+			hover._d_forcehide = true
+			local _onshow = hover.OnShow
+			hover.OnShow = function(hover)
+				_onshow(hover)
+				hover.forcehide = true
+				hover:Hide()
+			end
+		end
+	end
+	if controls then
+		if controls.playeractionhint then
+			controls.playeractionhint.text:Hide()
+		end
+		if controls.playeractionhint_itemhighlight then
+			controls.playeractionhint_itemhighlight.text:Hide()
+		end
+		if controls.attackhint then
+			controls.attackhint.text:Hide()
+		end
+		if controls.groundactionhint then
+			controls.groundactionhint.text:Hide()
+		end
+	end
+end
+
+function d_notalking()
+	for _, v in ipairs(AllPlayers) do
+		v.components.talker:IgnoreAll("d_notalking")
+	end
+end
+
+----------------------------------------------------------------------------------------------------------------------
+-- Scan Layout Tool
+-- Interactive area scanner that exports Tiled .tmx files.
+--
+-- Usage:
+--   d_scanlayout() - Enter selection mode. Click to set corners.
+----------------------------------------------------------------------------------------------------------------------
+
+local _scanlayout_state = nil
+local _scanlayout_tile_to_gid = nil
+
+local SCANLAYOUT_HIGHLIGHT = {0.1, 0.1, 1, 0}
+local SCANLAYOUT_IGNORE_TAGS = { "locomotor", "NOCLICK", "FX", "DECOR", "placer" }
+local SCANLAYOUT_SAVE_DIR = ""
+
+local GRID_NEIGHBORS = {
+    {dx = -1, dz =  0, dir = "s"},
+    {dx =  1, dz =  0, dir = "n"},
+    {dx =  0, dz = -1, dir = "e"},
+    {dx =  0, dz =  1, dir = "w"},
+}
+local GRID_OPPOSITE = { n = "s", s = "n", e = "w", w = "e" }
+
+local function _grid_update_art_at_coords(inst, tx, tz)
+    local placer = inst.outline_grid:GetDataAtPoint(tx, tz)
+
+    for _, n in ipairs(GRID_NEIGHBORS) do
+        local nplacer = inst.outline_grid:GetDataAtPoint(tx + n.dx, tz + n.dz)
+    
+        if nplacer ~= nil then
+            if placer ~= nil then
+                placer.AnimState:Hide(n.dir)
+            else
+                nplacer.AnimState:Show(GRID_OPPOSITE[n.dir])
+            end
+        end
+    end
+end
+
+local function _grid_place(inst, tx, tz)
+    local index = inst.outline_grid:GetIndex(tx, tz)
+
+    if inst.outline_grid:GetDataAtIndex(index) then
+        return
+    end
+
+    local placer = SpawnPrefab("gridplacer")
+    placer.Transform:SetPosition(TheWorld.Map:GetTileCenterPoint(tx, tz))
+
+    inst.outline_grid:SetDataAtIndex(index, placer)
+    _grid_update_art_at_coords(inst, tx, tz)
+end
+
+local function _grid_remove(inst, tx, tz)
+    local index = inst.outline_grid:GetIndex(tx, tz)
+    local placer = inst.outline_grid:GetDataAtIndex(index)
+
+    if placer == nil then
+        return
+    end
+
+    placer:Remove()
+    inst.outline_grid:SetDataAtIndex(index, nil)
+    _grid_update_art_at_coords(inst, tx, tz)
+end
+
+local function _grid_highlight(inst)
+    for index in pairs(inst.outline_grid.grid) do
+        inst.outline_grid:GetDataAtIndex(index).AnimState:SetMultColour(0.5, 0.5, 1, 1)
+    end
+end
+
+local function _grid_on_remove(inst)
+    for index in pairs(inst.outline_grid.grid) do
+        inst.outline_grid:GetDataAtIndex(index):Remove()
+    end
+
+    inst.outline_grid = nil
+end
+
+local function _create_grid_group_outline()
+    local inst = CreateEntity()
+
+    inst.entity:AddTransform()
+    inst.entity:SetCanSleep(false)
+
+    inst:AddTag("NOCLICK")
+    inst:AddTag("placer")
+
+    inst.persists = false
+
+    inst.outline_grid = DataGrid(TheWorld.Map:GetSize())
+
+    inst.OnRemoveEntity = _grid_on_remove
+
+    inst.PlaceGrid = _grid_place
+    inst.RemoveGrid = _grid_remove
+    inst.Highlight = _grid_highlight
+
+    return inst
+end
+
+local function _scanlayout_get_ground_types()
+    return require("map/static_layout").GROUND_TYPES
+end
+
+local function _scanlayout_get_tile_to_gid()
+    if not _scanlayout_tile_to_gid then
+        _scanlayout_tile_to_gid = {}
+        for gid, tile_id in ipairs(_scanlayout_get_ground_types()) do
+            if tile_id ~= nil then
+                _scanlayout_tile_to_gid[tile_id] = gid
+            end
+        end
+    end
+    return _scanlayout_tile_to_gid
+end
+
+local function _scanlayout_is_scannable(ent)
+    return ent.prefab and ent ~= ThePlayer and not ent:HasAnyTag(SCANLAYOUT_IGNORE_TAGS)
+end
+
+local function _scanlayout_collect_entities(bounds)
+    local map = TheWorld.Map
+    local seen = {}
+    local entities = {}
+
+    for gx = bounds.min_tx, bounds.max_tx do
+        for gz = bounds.min_tz, bounds.max_tz do
+            local cx, _, cz = map:GetTileCenterPoint(gx, gz)
+            for _, ent in ipairs(map:GetEntitiesOnTileAtPoint(cx, 0, cz)) do
+                if not seen[ent.GUID] and _scanlayout_is_scannable(ent) then
+                    seen[ent.GUID] = true
+                    entities[#entities + 1] = ent
+                end
+            end
+        end
+    end
+
+    return entities
+end
+
+local function _scanlayout_unhighlight_ents(state)
+    if not state.highlighted then
+        return
+    end
+
+    for _, ent in pairs(state.highlighted) do
+        if ent:IsValid() and ent.AnimState then
+            ent.AnimState:SetAddColour(0, 0, 0, 0)
+        end
+    end
+
+    state.highlighted = {}
+end
+
+local function _scanlayout_highlight_area(state)
+    _scanlayout_unhighlight_ents(state)
+
+    if not state.bounds then
+        return
+    end
+
+    state.highlighted = {}
+
+    for _, ent in ipairs(_scanlayout_collect_entities(state.bounds)) do
+        state.highlighted[ent.GUID] = ent
+        if ent.AnimState then
+            ent.AnimState:SetAddColour(unpack(SCANLAYOUT_HIGHLIGHT))
+        end
+    end
+end
+
+local function _scanlayout_rebuild_outline(state, min_tx, min_tz, max_tx, max_tz, highlight)
+    if state.outline then
+        state.outline:Remove()
+    end
+
+    state.outline = _create_grid_group_outline()
+
+    state.bounds = {
+        min_tx = min_tx, max_tx = max_tx,
+        min_tz = min_tz, max_tz = max_tz,
+        tiles_w = max_tx - min_tx + 1,
+        tiles_h = max_tz - min_tz + 1,
+    }
+
+    for x = min_tx, max_tx do
+        for z = min_tz, max_tz do
+            state.outline:PlaceGrid(x, z)
+        end
+    end
+
+    if highlight then
+        state.outline:Highlight()
+    end
+end
+
+local function _scanlayout_square_bounds(c1_tx, c1_tz, tx, tz)
+    local dx = tx - c1_tx
+    local dz = tz - c1_tz
+    local side = math.max(math.abs(dx), math.abs(dz))
+    local end_tx = c1_tx + side * (dx >= 0 and 1 or -1)
+    local end_tz = c1_tz + side * (dz >= 0 and 1 or -1)
+
+    return math.min(c1_tx, end_tx), math.min(c1_tz, end_tz),
+           math.max(c1_tx, end_tx), math.max(c1_tz, end_tz)
+end
+
+local function _scanlayout_stop_handlers(state)
+    if state.update_task then
+        state.update_task:Cancel()
+        state.update_task = nil
+    end
+
+    ThePlayer.components.playeractionpicker.rightclickoverride = nil
+end
+
+local function _scanlayout_build_tmx(tmx_w, tmx_h, tile_data, objects)
+    local lines = {
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        string.format('<map version="1.0" orientation="orthogonal" width="%d" height="%d" tilewidth="16" tileheight="16">', tmx_w, tmx_h),
+        ' <tileset firstgid="1" name="tiles" tilewidth="64" tileheight="64">',
+        '  <image source="../../../tools/tiled/dont_starve/tiles.png" width="512" height="1024"/>',
+        ' </tileset>',
+        string.format(' <layer name="BG_TILES" width="%d" height="%d">', tmx_w, tmx_h),
+        '  <data encoding="csv">',
+    }
+
+    for row = 0, tmx_h - 1 do
+        local row_vals = {}
+        for col = 0, tmx_w - 1 do
+            row_vals[#row_vals + 1] = tostring(tile_data[row * tmx_w + col + 1])
+        end
+        local line = table.concat(row_vals, ",")
+        if row < tmx_h - 1 then
+            line = line .. ","
+        end
+        lines[#lines + 1] = line
+    end
+
+    lines[#lines + 1] = '  </data>'
+    lines[#lines + 1] = ' </layer>'
+    lines[#lines + 1] = string.format(' <objectgroup name="FG_OBJECTS" width="%d" height="%d">', tmx_w, tmx_h)
+
+    for _, obj in ipairs(objects) do
+        lines[#lines + 1] = string.format('  <object type="%s" x="%d" y="%d"/>', obj.type, obj.x, obj.y)
+    end
+
+    lines[#lines + 1] = ' </objectgroup>'
+    lines[#lines + 1] = '</map>'
+
+    return table.concat(lines, "\n")
+end
+
+local function _scanlayout_show_export_popup()
+    local Screen = require "widgets/screen"
+    local Widget = require "widgets/widget"
+    local Image = require "widgets/image"
+    local TextEdit = require "widgets/textedit"
+    local Text = require "widgets/text"
+    local TEMPLATES = require "widgets/redux/templates"
+
+    local PANEL_W = 480
+    local PANEL_H = 230
+
+    local ScanLayoutExportScreen = Class(Screen, function(self)
+        Screen._ctor(self, "ScanLayoutExportScreen")
+
+        -- Darken background
+        self.black = self:AddChild(Image("images/global.xml", "square.tex"))
+        self.black:SetVRegPoint(ANCHOR_MIDDLE)
+        self.black:SetHRegPoint(ANCHOR_MIDDLE)
+        self.black:SetVAnchor(ANCHOR_MIDDLE)
+        self.black:SetHAnchor(ANCHOR_MIDDLE)
+        self.black:SetScaleMode(SCALEMODE_FILLSCREEN)
+        self.black:SetTint(0, 0, 0, .75)
+
+        self.proot = self:AddChild(Widget("ROOT"))
+        self.proot:SetVAnchor(ANCHOR_MIDDLE)
+        self.proot:SetHAnchor(ANCHOR_MIDDLE)
+        self.proot:SetPosition(0, 0, 0)
+        self.proot:SetScaleMode(SCALEMODE_PROPORTIONAL)
+
+        self.bg = self.proot:AddChild(Image(CRAFTING_ATLAS, "backing.tex"))
+        self.bg:SetVRegPoint(ANCHOR_MIDDLE)
+        self.bg:SetHRegPoint(ANCHOR_MIDDLE)
+        self.bg:ScaleToSize(PANEL_W, PANEL_H)
+        self.bg:SetTint(1, 1, 1, 0.95)
+
+        self.border_top = self.proot:AddChild(Image(CRAFTING_ATLAS, "top.tex"))
+        self.border_top:SetPosition(0, PANEL_H / 2, 0)
+        self.border_top:ScaleToSize(PANEL_W + 6, 10)
+
+        self.border_bottom = self.proot:AddChild(Image(CRAFTING_ATLAS, "bottom.tex"))
+        self.border_bottom:SetPosition(0, -PANEL_H / 2, 0)
+        self.border_bottom:ScaleToSize(PANEL_W + 6, 10)
+
+        self.border_left = self.proot:AddChild(Image(CRAFTING_ATLAS, "side.tex"))
+        self.border_left:SetPosition(-PANEL_W / 2, 0, 0)
+        self.border_left:ScaleToSize(6, PANEL_H)
+
+        self.border_right = self.proot:AddChild(Image(CRAFTING_ATLAS, "side.tex"))
+        self.border_right:SetPosition(PANEL_W / 2, 0, 0)
+        self.border_right:ScaleToSize(6, PANEL_H)
+
+        self.divider = self.proot:AddChild(Image(CRAFTING_ATLAS, "horizontal_bar.tex"))
+        self.divider:SetPosition(0, 52, 0)
+        self.divider:ScaleToSize(PANEL_W - 20, 3)
+        self.divider:SetTint(1, 1, 1, 0.5)
+
+        -- Title
+        self.title = self.proot:AddChild(Text(CHATFONT, 38))
+        self.title:SetPosition(0, 75, 0)
+        self.title:SetColour(215/255, 210/255, 157/255, 1)
+        self.title:SetString("Export Selection")
+
+        -- Path label
+        self.path_label = self.proot:AddChild(Text(CHATFONT, 18))
+        self.path_label:SetPosition(0, 38, 0)
+        self.path_label:SetColour(0.6, 0.6, 0.5, 1)
+        self.path_label:SetString("Saving to: " .. SCANLAYOUT_SAVE_DIR)
+
+        local edit_width = 380
+        local edit_height = 40
+
+        self.edit_bg = self.proot:AddChild(Image("images/global_redux.xml", "textbox3_gold_normal.tex"))
+        self.edit_bg:SetPosition(0, -5, 0)
+        self.edit_bg:ScaleToSize(edit_width + 20, edit_height)
+
+        self.name_edit = self.proot:AddChild(TextEdit(CHATFONT, 22, "", {.1, .1, .1, 1}))
+        self.name_edit:SetPosition(0, -5, 0)
+        self.name_edit:SetRegionSize(edit_width - 10, edit_height)
+        self.name_edit:SetHAlign(ANCHOR_LEFT)
+        self.name_edit:SetFocusedImage(self.edit_bg, "images/global_redux.xml", "textbox3_gold_normal.tex", "textbox3_gold_hover.tex", "textbox3_gold_focus.tex")
+        self.name_edit:SetTextLengthLimit(128)
+        self.name_edit:SetIdleTextColour(.1, .1, .1, 1)
+        self.name_edit:SetEditTextColour(.1, .1, .1, 1)
+        self.name_edit:SetForceEdit(true)
+        self.name_edit:SetString("")
+        self.name_edit.OnTextEntered = function() self:DoExport() end
+
+        local btn_w, btn_h = 170, 45
+
+        self.save_btn = self.proot:AddChild(TEMPLATES.StandardButton(function() self:DoExport() end, "Save", {btn_w, btn_h}))
+        self.save_btn:SetPosition(-95, -60, 0)
+
+        self.cancel_btn = self.proot:AddChild(TEMPLATES.StandardButton(function() self:Close() end, "Cancel", {btn_w, btn_h}))
+        self.cancel_btn:SetPosition(95, -60, 0)
+
+        self.default_focus = self.name_edit
+    end)
+
+    function ScanLayoutExportScreen:OnBecomeActive()
+        ScanLayoutExportScreen._base.OnBecomeActive(self)
+        self.name_edit:SetFocus()
+        self.name_edit:SetEditing(true)
+    end
+
+    function ScanLayoutExportScreen:OnRawKey(key, down)
+        if ScanLayoutExportScreen._base.OnRawKey(self, key, down) then return true end
+        return false
+    end
+
+    function ScanLayoutExportScreen:OnControl(control, down)
+        if ScanLayoutExportScreen._base.OnControl(self, control, down) then return true end
+        if control == CONTROL_CANCEL and not down then
+            self:Close()
+            return true
+        end
+    end
+
+    function ScanLayoutExportScreen:DoExport()
+        d_scanlayout_export(self.name_edit:GetString())
+        self:Close()
+    end
+
+    function ScanLayoutExportScreen:Close()
+        TheInput:EnableDebugToggle(true)
+
+        d_scanlayout_clear()
+
+        TheFrontEnd:PopScreen(self)
+    end
+
+    TheInput:EnableDebugToggle(false)
+    TheFrontEnd:PushScreen(ScanLayoutExportScreen())
+end
+
+function d_scanlayout_clear()
+    if not _scanlayout_state then
+        return
+    end
+
+    _scanlayout_stop_handlers(_scanlayout_state)
+    _scanlayout_unhighlight_ents(_scanlayout_state)
+
+    if _scanlayout_state.outline then
+        _scanlayout_state.outline:Remove()
+    end
+
+    _scanlayout_state = nil
+end
+
+function d_scanlayout()
+    -- If already selecting, cancel
+    if _scanlayout_state and not _scanlayout_state.done then
+        d_scanlayout_clear()
+        print("ScanLayout: Cancelled.")
+        return
+    end
+
+    d_scanlayout_clear()
+
+    local state = {
+        phase = "pick_first",   -- pick_first -> pick_second -> done
+        corner1 = nil,
+        last_tx = nil,
+        last_tz = nil,
+        outline = nil,
+        bounds = nil,
+        highlighted = {},
+        done = false,
+    }
+    _scanlayout_state = state
+
+    local map = TheWorld.Map
+
+    state.update_task = TheWorld:DoPeriodicTask(0, function()
+        if state.done then
+            return
+        end
+
+        local pos = TheInput:GetWorldPosition()
+        local tx, tz = map:GetTileCoordsAtPoint(pos:Get())
+        if tx == state.last_tx and tz == state.last_tz then return end
+        state.last_tx, state.last_tz = tx, tz
+
+        if state.phase == "pick_first" then
+            _scanlayout_rebuild_outline(state, tx, tz, tx, tz)
+        elseif state.phase == "pick_second" then
+            local c1 = state.corner1
+            local min_tx, min_tz, max_tx, max_tz = _scanlayout_square_bounds(c1.tx, c1.tz, tx, tz)
+            _scanlayout_unhighlight_ents(state)
+            _scanlayout_rebuild_outline(state, min_tx, min_tz, max_tx, max_tz)
+            _scanlayout_highlight_area(state)
+        end
+    end)
+
+    local ap = ThePlayer.components.playeractionpicker
+
+    local scanlayout_action = Action({}, 0, true)
+    scanlayout_action.id = "SCANLAYOUT"
+    scanlayout_action.instant = true
+    scanlayout_action.stroverridefn = function()
+        return state.phase == "pick_first" and "Start Selection" or "End Selection"
+    end
+    scanlayout_action.fn = function(act)
+        if state.done then return true end
+
+        local pos = act:GetActionPoint() or TheInput:GetWorldPosition()
+        local tx, tz = map:GetTileCoordsAtPoint(pos:Get())
+
+        if state.phase == "pick_first" then
+            state.corner1 = {tx = tx, tz = tz}
+            state.phase = "pick_second"
+
+        elseif state.phase == "pick_second" then
+            local c1 = state.corner1
+            local min_tx, min_tz, max_tx, max_tz = _scanlayout_square_bounds(c1.tx, c1.tz, tx, tz)
+
+            _scanlayout_stop_handlers(state)
+            _scanlayout_rebuild_outline(state, min_tx, min_tz, max_tx, max_tz, true)
+            _scanlayout_highlight_area(state)
+
+            state.done = true
+            print(string.format("ScanLayout: %dx%d area selected.", state.bounds.tiles_w, state.bounds.tiles_h))
+            _scanlayout_show_export_popup()
+        end
+        return true
+    end
+
+    ap.rightclickoverride = function(inst, target, position)
+        if not state.done then
+            return { BufferedAction(inst, nil, scanlayout_action, nil, position) }
+        end
+
+        return {}
+    end
+end
+
+function d_scanlayout_export(filename)
+    if not _scanlayout_state or not _scanlayout_state.bounds then
+        print("ScanLayout: No area selected. Run d_scanlayout() first.")
+        return
+    end
+
+    filename = filename or "scanlayout_export"
+
+    local map = TheWorld.Map
+    local b = _scanlayout_state.bounds
+    local tilefactor = TILE_SCALE
+    local tile_to_gid = _scanlayout_get_tile_to_gid()
+
+    local tmx_w = b.tiles_w * tilefactor
+    local tmx_h = b.tiles_h * tilefactor
+
+    -- Build tile layer data
+    local tile_data = {}
+    for i = 1, tmx_w * tmx_h do
+        tile_data[i] = 0
+    end
+
+    for row = 0, b.tiles_h - 1 do
+        for col = 0, b.tiles_w - 1 do
+            local tile_type = map:GetTile(b.min_tx + col, b.min_tz + row)
+            local gid = tile_to_gid[tile_type] or 0
+            local tmx_row = row * tilefactor + (tilefactor - 1)
+            local tmx_col = col * tilefactor
+            tile_data[tmx_row * tmx_w + tmx_col + 1] = gid
+        end
+    end
+
+    -- Compute world-to-TMX coordinate transform
+    local left_wx, _, left_wz = map:GetTileCenterPoint(b.min_tx, b.min_tz)
+    local right_wx, _, right_wz = map:GetTileCenterPoint(b.max_tx, b.max_tz)
+    local center_x = (left_wx + right_wx) / 2
+    local center_z = (left_wz + right_wz) / 2
+    local tmx_center_px = tmx_w * 16 / 2
+    local tmx_center_py = tmx_h * 16 / 2
+
+    -- Collect entity objects
+    local objects = {}
+    for _, ent in ipairs(_scanlayout_collect_entities(b)) do
+        local wx, _, wz = ent.Transform:GetWorldPosition()
+        objects[#objects + 1] = {
+            type = ent.prefab,
+            x = math.floor((wx - center_x) / TILE_SCALE * 64 + tmx_center_px + 0.5),
+            y = math.floor((wz - center_z) / TILE_SCALE * 64 + tmx_center_py + 0.5),
+        }
+    end
+
+    -- Write TMX file
+    local save_path = SCANLAYOUT_SAVE_DIR .. filename .. ".tmx"
+    local f = io.open(save_path, "w")
+    if f then
+        f:write(_scanlayout_build_tmx(tmx_w, tmx_h, tile_data, objects))
+        f:close()
+        print(string.format("ScanLayout: Exported to '%s'", save_path))
+    else
+        print(string.format("ScanLayout: Failed to write '%s'", save_path))
+    end
+
+    return save_path
+end
+
+local TrapFumaroleUtil = require("prefabs/trap_fumarole_util")
+function d_spawnfumarolehash()
+    local inst = CreateEntity()
+    --[[Non-networked entity]]
+    inst.entity:SetCanSleep(false)
+    inst.persists = false
+
+    inst.entity:AddTransform()
+    inst.entity:AddAnimState()
+
+    inst:AddTag("CLASSIFIED")
+    inst:AddTag("NOCLICK")
+
+    inst.AnimState:SetBank("trap_fumarole_ground_fx")
+    inst.AnimState:SetBuild("trap_fumarole_ground_fx")
+    inst.AnimState:PlayAnimation("ember"..math.random(4).."_ground")
+    inst.AnimState:SetOrientation(ANIM_ORIENTATION.OnGround)
+	inst.AnimState:SetLayer(LAYER_BACKGROUND)
+	inst.AnimState:SetSortOrder(0)
+
+    inst.Transform:SetPosition(TrapFumaroleUtil.GetTrapCenterPoint(TheInput:GetWorldPosition():Get()))
+
+    return inst
+end
+
+function d_golfteleport()
+    local inst = c_sel()
+    if not inst or not EntityScript.is_instance(inst) then
+        print("d_golfteleport needs c_sel() to be an inst!")
+        return
+    end
+    local x, y, z = ConsoleWorldPosition():Get()
+    x, z = math.floor(x + 0.5), math.floor(z + 0.5)
+    if inst.Physics ~= nil then
+        inst.Physics:Teleport(x, y, z)
+    else
+        inst.Transform:SetPosition(x, y, z)
     end
 end

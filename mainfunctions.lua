@@ -400,13 +400,13 @@ function PrefabExists(name)
     return Prefabs[name] ~= nil
 end
 
-function SpawnPrefab(name, skin, skin_id, creator)
+function SpawnPrefab(name, skin, skin_id, creator, skin_custom)
     name = string.sub(name, string.find(name, "[^/]*$"))
     if skin and not IsItemId(skin) then
         print("Unknown skin", skin)
 		skin = nil
     end
-    local guid = TheSim:SpawnPrefab(name, skin, skin_id, creator)
+    local guid = TheSim:SpawnPrefab(name, skin, skin_id, creator, skin_custom)
     return Ents[guid]
 end
 
@@ -2018,7 +2018,13 @@ local function OnUserPickedCharacter(char, skin_base, clothing_body, clothing_ha
             selection = nil
         end
 
-        TheNet:SendSpawnRequestToServer(char, skin_base, clothing_body, clothing_hand, clothing_legs, clothing_feet, starting_skins, selection)
+        -- FIXME(JBK): skinoverrides: Player selections from UI.
+        local skinoverrides = {}
+        if char == "wx78" and TheInventory:CheckOwnership("idleanimations_wx78_headadjust") then -- FIXME(JBK): skinoverrides: HACK
+            table.insert(skinoverrides, "idleanimations_wx78_headadjust")
+        end
+
+        TheNet:SendSpawnRequestToServer(char, skin_base, clothing_body, clothing_hand, clothing_legs, clothing_feet, starting_skins, selection, skinoverrides)
     end
 
     TheFrontEnd:Fade(FADE_OUT, 1, doSpawn, nil, nil, "white")
@@ -2357,6 +2363,7 @@ WORLDSTATETAGS.DeclareTag("ATRIUM_KEY_FOUND")
 --WORLDSTATETAGS.DeclareTag("") -- FIXME(JBK): It would be nice for a CELESTIAL_PORTAL_BUILT thing here for caves.
 WORLDSTATETAGS.DeclareTag("ARCHIVES_ENERGIZED")
 WORLDSTATETAGS.DeclareTag("SHADOW_RIFTS_ACTIVE")
+-- WORLDSTATETAGS.DeclareTag("VAULT_KEY_FOUND") -- FIXME(JBK): rifts7: Vault key progress flag.
 WORLDSTATETAGS.Lock()
 
 
@@ -2449,8 +2456,9 @@ function CreateRepeatedSoundVolumeReduction(repeat_time, lowered_volume_percent)
     end
 end
 
---if fired in the last 0.25 seconds, reduce the volume to 75%
-ClickMouseoverSoundReduction = CreateRepeatedSoundVolumeReduction(0.25, 0.75)
+ClickMouseoverSoundReduction = CreateRepeatedSoundVolumeReduction(0.25, 0.75) --if fired in the last 0.25 seconds, reduce the volume to 75%
+LuckSoundReduction = CreateRepeatedSoundVolumeReduction(0.75, 0.50) --if fired in the last 0.5 seconds, reduce the volume to 50%
+UpgradeModuleMouseoverSoundReduction = CreateRepeatedSoundVolumeReduction(1.0, 0.65) --if fired in the last 1.0 seconds, reduce the volume to 65%
 
 local currently_displaying = nil
 function DisplayAntiAddictionNotification( notification )

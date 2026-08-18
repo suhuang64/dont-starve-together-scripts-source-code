@@ -170,6 +170,10 @@ local driedleaves = {"petals_dried", "foliage_dried", "succulent_picked_dried", 
 AddIngredientValues(driedleaves, {decoration = 1, dried = 1})
 AddIngredientValues({"petals_evil_dried"}, {decoration = 1, magic = .5, dried = 1})
 
+AddIngredientValues({"wx78_foodbrick"}, {inedible = 1})
+
+AddIngredientValues({"mitegland"}, {meat=.5,monster=.5}, true)
+
 --our naming conventions aren't completely consistent, sadly
 local aliases =
 {

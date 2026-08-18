@@ -250,7 +250,7 @@ local assets =
     Asset("PKGREF", "anim/dynamic/oddment_berrysauce.dyn"),
     Asset("PKGREF", "anim/dynamic/oddment_pumpkinpie.dyn"),
     Asset("DYNAMIC_ATLAS", "images/maze.xml"),
-    Asset("ASSET_PKGREF", "images/maze.tex"),
+	Asset("PKGREF", "images/maze.tex"),
     
     Asset("ANIM", "anim/kitcoon_nametag.zip"),   
     Asset("ANIM", "anim/kitcoon_forest_build.zip"),
@@ -325,9 +325,10 @@ end
 --table.insert(assets, Asset("IMAGE", "images/nx_controllers.tex"))
 
 
-if PLATFORM == "WIN32_RAIL" then
+-- Don't pull these files in through prefabs.xml - they are added in packaging
+if PLATFORM == "WIN32_RAIL" and rawget(_G, "TheSim") then
     table.insert(assets, Asset("DYNAMIC_ATLAS", "images/rail.xml") )
-    table.insert(assets, Asset("ASSET_PKGREF", "images/rail.tex") )
+	table.insert(assets, Asset("PKGREF", "images/rail.tex"))
 end
 
 for i, v in pairs(MAINSCREEN_TOOL_LIST) do

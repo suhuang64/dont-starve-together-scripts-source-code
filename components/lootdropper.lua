@@ -79,18 +79,30 @@ function LootDropper:AddIfNotChanceLoot(prefab)
     table.insert(self.ifnotchanceloot, { prefab = prefab })
 end
 
+function LootDropper:ClearChanceLoot()
+    self.chanceloot = nil
+    self.ifnotchanceloot = nil
+end
+
+function LootDropper:GetRandomLootTable()
+    return (self.inst.components.hauntable and self.inst.components.hauntable.haunted) and self.randomhauntedloot
+        or self.randomloot
+end
+
+local function WeightedRandomLootTotal(loot)
+    local total = 0
+    for k, v in pairs(loot) do
+        total = total + v.weight
+    end
+    return total
+end
 function LootDropper:PickRandomLoot()
-    if self.inst.components.hauntable and self.inst.components.hauntable.haunted and self.totalhauntedrandomweight and self.totalhauntedrandomweight > 0 and self.randomhauntedloot then
-        local rnd = math.random()*self.totalhauntedrandomweight
-        for k,v in pairs(self.randomhauntedloot) do
-            rnd = rnd - v.weight
-            if rnd <= 0 then
-                return v.prefab
-            end
-        end
-    elseif self.totalrandomweight and self.totalrandomweight > 0 and self.randomloot then
-        local rnd = math.random()*self.totalrandomweight
-        for k,v in pairs(self.randomloot) do
+    local randomloot = self:GetRandomLootTable()
+    if randomloot then
+        -- TODO process weights with luck, give favor to lower weights
+        -- randomloot = shallowcopy(randomloot)
+        local rnd = math.random() * WeightedRandomLootTotal(randomloot)
+        for k,v in pairs(randomloot) do
             rnd = rnd - v.weight
             if rnd <= 0 then
                 return v.prefab
@@ -148,6 +160,29 @@ function LootDropper:GetRecipeLoot(recipe)
     return loots
 end
 
+function LootDropper:GetLuckyUser() -- who's the lucky person?
+    local health = self.inst.components.health
+    local workable = self.inst.components.workable
+    if health and health.causeofdeath and health.causeofdeath:IsValid() then
+        return health.causeofdeath
+    elseif workable and workable.lastworker and workable.lastworker:IsValid() then
+        return workable.lastworker
+    end
+end
+
+function LootDropper:GetChance(chance)
+    if chance >= 1 then
+        return chance
+    end
+
+    local lucky_user = self:GetLuckyUser()
+    if lucky_user then
+        return GetEntityLuckChance(lucky_user, chance, LuckFormulas.LootDropperChance)
+    end
+
+    return chance
+end
+
 function LootDropper:GenerateLoot()
     local loots = {}
 
@@ -155,7 +190,7 @@ function LootDropper:GenerateLoot()
         self.lootsetupfn(self)
     end
 
-    if self.numrandomloot and math.random() <= (self.chancerandomloot or 1) then
+    if self.numrandomloot and math.random() <= self:GetChance(self.chancerandomloot or 1) then
         for k = 1, self.numrandomloot do
             local loot = self:PickRandomLoot()
             if loot then
@@ -168,7 +203,7 @@ function LootDropper:GenerateLoot()
         for k,v in pairs(self.chanceloot) do
             if v.chance >= 1.0 then
                 table.insert(loots, v.prefab)
-            elseif math.random() < v.chance then
+            elseif math.random() <= self:GetChance(v.chance) then
                 table.insert(loots, v.prefab)
                 self.droppingchanceloot = true
             end
@@ -183,7 +218,7 @@ function LootDropper:GenerateLoot()
                 local chance = entry[2]
                 if chance >= 1.0 then
                     table.insert(loots, prefab)
-                elseif math.random() <= chance then
+                elseif math.random() <= self:GetChance(chance) then
                     table.insert(loots, prefab)
                     self.droppingchanceloot = true
                 end
@@ -295,6 +330,7 @@ function LootDropper:FlingItem(loot, pt)
         local max_speed = self.max_speed or 2
         local y_speed = self.y_speed or 8
         local y_speed_variance = self.y_speed_variance or 4
+        local y_offset = self.y_offset or 0
 
         if loot.Physics ~= nil then
             local angle = (self.flingtargetpos ~= nil and GetRandomWithVariance(self.inst:GetAngleToPoint(self.flingtargetpos), self.flingtargetvariance or 0) * DEGREES)
@@ -302,7 +338,7 @@ function LootDropper:FlingItem(loot, pt)
             local speed = min_speed + math.random() * (max_speed - min_speed)
             if loot:IsAsleep() then
                 local radius = .5 * speed + (self.inst.Physics ~= nil and loot:GetPhysicsRadius(1) + self.inst:GetPhysicsRadius(1) or 0)
-                loot.Transform:SetPosition(
+				TryTeleportToLaunchPos(loot,
                     pt.x + math.cos(angle) * radius,
                     0,
                     pt.z - math.sin(angle) * radius
@@ -310,26 +346,24 @@ function LootDropper:FlingItem(loot, pt)
             else
                 local sinangle = math.sin(angle)
                 local cosangle = math.cos(angle)
-                loot.Physics:SetVel(speed * cosangle, GetRandomWithVariance(y_speed, y_speed_variance), speed * -sinangle)
-
                 if self.inst ~= nil and self.inst.Physics ~= nil then
                     local radius = loot:GetPhysicsRadius(1) + self.inst:GetPhysicsRadius(1)
                     if not self.spawn_loot_inside_prefab then
-                        loot.Transform:SetPosition(
+						TryTeleportToLaunchPos(loot,
                             pt.x + cosangle * radius,
-                            pt.y,
+                            pt.y + y_offset,
                             pt.z - sinangle * radius
                         )
                     else
                         radius = radius * math.random()
-                        loot.Transform:SetPosition(
+						TryTeleportToLaunchPos(loot,
                             pt.x + cosangle * radius,
-                            pt.y + 0.5,
+                            pt.y + y_offset + 0.5,
                             pt.z - sinangle * radius
                         )
                     end
                 end
-
+				loot.Physics:SetVel(speed * cosangle, GetRandomWithVariance(y_speed, y_speed_variance), speed * -sinangle)
             end
         end
     end
@@ -401,7 +435,7 @@ function LootDropper:DropLoot(pt, prefabs)
     end
 
     if IsSpecialEventActive(SPECIAL_EVENTS.WINTERS_FEAST) then
-        local prefabname = string.upper(self.inst.prefab)
+        local prefabname = string.upper(self.overridewinterlootprefabname or self.inst.prefab)
         local num_decor_loot = self.GetWintersFeastOrnaments ~= nil and self.GetWintersFeastOrnaments(self.inst) or TUNING.WINTERS_FEAST_TREE_DECOR_LOOT[prefabname] or nil
         if num_decor_loot ~= nil then
             for i = 1, num_decor_loot.basic do
@@ -410,11 +444,11 @@ function LootDropper:DropLoot(pt, prefabs)
             if num_decor_loot.special ~= nil then
                 self:SpawnLootPrefab(num_decor_loot.special, pt)
             end
-        elseif not TUNING.WINTERS_FEAST_LOOT_EXCLUSION[prefabname] and (self.inst:HasTag("monster") or self.inst:HasTag("animal")) then
+        elseif not TUNING.WINTERS_FEAST_LOOT_EXCLUSION[prefabname] and self.inst:HasAnyTag("monster", "animal", "creaturecorpse") then
             local loot = math.random()
-            if loot < 0.005 then
+            if loot <= self:GetChance(TUNING.WINTERS_FEAST_BASIC_ORNAMENT_DROP_CHANCE) then
                 self:SpawnLootPrefab(GetRandomBasicWinterOrnament(), pt)
-            elseif loot < 0.20 then
+            elseif loot <= self:GetChance(TUNING.WINTERS_FEAST_WINTER_FOOD_DROP_CHANCE) then
                 self:SpawnLootPrefab("winter_food"..math.random(NUM_WINTERFOOD), pt)
             end
         end

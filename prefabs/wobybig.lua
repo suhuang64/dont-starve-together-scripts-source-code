@@ -38,6 +38,7 @@ local prefabs =
 	"woby_commands_classified",
 	"woby_dash_shadow_fx",
 	"woby_dash_silhouette_fx",
+	"globalmapiconunderfog",
 }
 
 local brain = require("brains/wobybigbrain")
@@ -464,6 +465,12 @@ local function OnRiderChanged(inst, data)
 		SetRackFxOwner(inst, data and data.newrider or nil)
 	end
 
+	if data and data.newrider then
+		inst.components.maprevealable:Stop()
+	else
+		inst.components.maprevealable:Start()
+	end
+
 	inst:UpdateOwnerNewStateListener(inst._playerlink)
 end
 
@@ -874,11 +881,12 @@ local WAKE_TO_FOLLOW_DISTANCE = 6
 local SLEEP_NEAR_LEADER_DISTANCE = 5
 
 local function IsLeaderSleeping(inst)
-    return inst.components.follower.leader and inst.components.follower.leader:HasTag("sleeping")
+    local leader = inst.components.follower and inst.components.follower:GetLeader()
+    return leader and leader:HasTag("sleeping")
 end
 
 local function IsLeaderTellingStory(inst)
-    local leader = inst.components.follower.leader
+    local leader = inst.components.follower and inst.components.follower:GetLeader()
     return leader and leader.components.storyteller and leader.components.storyteller:IsTellingStory()
 end
 
@@ -966,6 +974,9 @@ local function fn()
     inst.components.eater:SetDiet({ FOODTYPE.MONSTER }, { FOODTYPE.MONSTER })
 	inst.components.eater.custom_stats_mod_fn = CustomFoodStatsMod
 	inst.components.eater:SetOnEatFn(OnEat)
+
+	inst:AddComponent("maprevealable")
+	inst.components.maprevealable:SetIconPrefab("globalmapiconunderfog")
 
     inst:AddComponent("inspectable")
     inst:AddComponent("timer")

@@ -35,6 +35,12 @@ function CraftingMenuDetails:OnControl(control, down)
 end
 
 function CraftingMenuDetails:_GetHintTextForRecipe(player, recipe)
+	-- Small exception. Show that a recipe is available in all lunar new years instead of just one.
+	-- ( PERDOFFERING level 1 means available for all years )
+	if recipe.level.PERDOFFERING == 1 then
+		return "NEEDSSHRINE"
+	end
+
     local validmachines = {}
     local adjusted_level = deepcopy(recipe.level)
 
@@ -245,8 +251,13 @@ function CraftingMenuDetails:UpdateNameString()
     local meta = self.data.meta
 
     local namestr = STRINGS.NAMES[string.upper(recipe.nameoverride or recipe.name)] or STRINGS.NAMES[string.upper(recipe.product)]
-    if meta.limitedamount then
+    if meta.limitedamount and meta.build_state ~= "hint" then
         namestr = subfmt(STRINGS.UI.CRAFTING.LIMITEDAMOUNTFMT, {name = namestr, number = meta.limitedamount})
+	else
+		local numtogive = recipe.override_numtogive_fn and recipe.override_numtogive_fn(recipe, self.owner, true) or recipe.numtogive
+		if numtogive > 1 then
+			namestr = subfmt(STRINGS.UI.CRAFTING.NUMTOGIVEFMT, {name = namestr, number = numtogive})
+		end
     end
 
     local title_width = self.panel_width / 2 - 30
@@ -276,6 +287,9 @@ function CraftingMenuDetails:PopulateRecipeDetailPanel(data, skin_name)
         self:UpdateNameString()
 		return
 	end
+    if skin_name == nil and PREFAB_SKINS_SHOULD_NOT_SELECT[recipe.product] then
+        skin_name = GetNextOwnedSkin(recipe.product)
+    end
 
 	self.from_filter_name = self.parent_widget.current_filter_name
 	--print("PopulateRecipeDetailPanel", self.parent_widget.current_filter_name, data ~= nil and data.recipe.name or nil, skin_name)

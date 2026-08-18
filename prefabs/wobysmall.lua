@@ -32,6 +32,7 @@ local prefabs =
 	"woby_rack_container",
 	"pet_hunger_classified",
 	"woby_commands_classified",
+	"globalmapiconunderfog",
 }
 
 local brain = require("brains/wobysmallbrain")
@@ -215,11 +216,12 @@ local HUNGRY_PERISH_PERCENT = 0.5 -- matches stale tag
 local STARVING_PERISH_PERCENT = 0.2 -- matches spoiked tag
 
 local function IsLeaderSleeping(inst)
-    return inst.components.follower.leader and inst.components.follower.leader:HasTag("sleeping")
+    local leader = inst.components.follower and inst.components.follower:GetLeader()
+    return leader and leader:HasTag("sleeping")
 end
 
 local function IsLeaderTellingStory(inst)
-    local leader = inst.components.follower.leader
+    local leader = inst.components.follower and inst.components.follower:GetLeader()
     return leader and leader.components.storyteller and leader.components.storyteller:IsTellingStory()
 end
 
@@ -723,6 +725,9 @@ local function fn()
         return inst
     end
 
+	inst.scrapbook_thingtype = "creature"
+	inst.scrapbook_anim = "idle_loop"
+
 	--Remove these tags so that they can be added properly when replicating components below
 	inst:RemoveTag("_hunger")
 
@@ -734,6 +739,9 @@ local function fn()
     inst.IsPlayful = IsPlayful
 
 	inst.playmatetags = {"critter"}
+
+	inst:AddComponent("maprevealable")
+	inst.components.maprevealable:SetIconPrefab("globalmapiconunderfog")
 
     inst:AddComponent("inspectable")
 

@@ -14,6 +14,11 @@ local prefabs =
     --"lunarfeather",
 }
 
+local mutated_scrapbook_adddeps =
+{
+	"lunarthrall_plant_gestalt",
+}
+
 SetSharedLootTable('bird_mutant_rift',
 {
     {'spoiled_food',       1.00},
@@ -28,70 +33,6 @@ local sounds =
     eat = "lunarhail_event/creatures/lunar_crow/peck_shard",
     death = "lunarhail_event/creatures/lunar_crow/death",
 }
-
-local FORMATION_ROTATION_SPEED = 1
-local FORMATION_RADIUS = 15
-local FORMATION_SEARCH_RADIUS = 30
-local FORMATION_MAX_SPEED = 10.5
-local FORMATION_MAX_OFFSET = 0.4
-local FORMATION_OFFSET_LERP = 0.2
-local FORMATION_MAX_DELTA_SQ = 16*16
-
-local VALIDATE_FORMATION_FREQ = 1
-
-local function FollowerOnUpdate(inst, targetpos)
-    if not inst.brain.stopped then
-        local x, y, z = inst.Transform:GetWorldPosition()
-        inst:FacePoint(targetpos.x, 0, targetpos.z)
-        if inst.updatecomponents[inst.components.locomotor] == nil then
-            inst.components.locomotor:RunForward(true)
-        end
-    end
-end
-
-local function OnLeaveFormation(inst, leader)
-
-end
-
-local function OnEnterFormation(inst, leader)
-    inst.components.locomotor:Stop()
-
-    inst:AddTag("NOBLOCK")
-end
-
-local function LeaderOnUpdate(inst)
-    local leader = inst.components.formationleader
-    if leader.target ~= nil and leader.target:IsValid() then
-        inst.Transform:SetPosition(leader.target.Transform:GetWorldPosition())
-    end
-end
-
-local function MakeFormation(inst, target)
-    local leader = SpawnPrefab("formationleader")
-    local x, y, z = inst.Transform:GetWorldPosition()
-    leader.Transform:SetPosition(x, y, z)
-    leader._offset = leader:GetPosition()
-
-    leader.components.formationleader:SetUp(target, inst)
-
-    target._lightflier_formation = leader
-    leader.components.formationleader.ondisbandfn = nil
-
-    leader.components.formationleader.min_formation_size = 1
-    leader.components.formationleader.max_formation_size = 20
-
-    leader.components.formationleader.radius = FORMATION_RADIUS
-    leader.components.formationleader.thetaincrement = FORMATION_ROTATION_SPEED
-
-    leader.components.formationleader.onupdatefn = LeaderOnUpdate
-end
-
-local function Debug_FindTeam(inst)
-    local ta = inst.components.formationfollower
-    if not ta.inteam and not ta:SearchForFormation() then
-        MakeFormation(inst, ThePlayer)
-    end
-end
 
 local brain = require "brains/bird_mutant_rift_brain"
 local easing = require "easing"
@@ -161,23 +102,6 @@ local function OnTimerDone(inst, data)
     end
 end
 
-local function OnThreatNear(inst, data)
-    local mutatedbirdmanager = TheWorld.components.mutatedbirdmanager
-    local threat = data ~= nil and data.threat
-    if threat ~= nil and mutatedbirdmanager then
-        -- this catcoon has made itself an enemy.
-        mutatedbirdmanager:SetEnemyOfBirds(threat)
-    end
-end
-
-local function OnAttacked(inst, data)
-    local mutatedbirdmanager = TheWorld.components.mutatedbirdmanager
-    local attacker = data ~= nil and data.attacker
-    if attacker and mutatedbirdmanager then
-        mutatedbirdmanager:SetEnemyOfBirds(attacker)
-    end
-end
-
 --
 
 local function OnDeath(inst)
@@ -242,6 +166,8 @@ local function commonfn()
         return inst
     end
 
+	inst.scrapbook_adddeps = mutated_scrapbook_adddeps
+
     inst.sounds = sounds
     inst.flyawaydistance = TUNING.BIRD_SEE_THREAT_DISTANCE
 
@@ -283,18 +209,6 @@ local function commonfn()
     inst.components.inventoryitem.canbepickedupalive = true
     inst.components.inventoryitem:SetSinks(true)
 
-    --inst:AddComponent("teamattacker")
-    --inst.components.teamattacker.team_type = "mutatedbird"
-
-    -- inst:AddComponent("formationfollower")
-    -- inst.components.formationfollower.searchradius = FORMATION_SEARCH_RADIUS
-    -- inst.components.formationfollower.formation_type = "mutatedbird"
-    -- inst.components.formationfollower.onupdatefn = FollowerOnUpdate
-    -- inst.components.formationfollower.onleaveformationfn = OnLeaveFormation
-    -- inst.components.formationfollower.onenterformationfn = OnEnterFormation
-
-    -- inst.Debug_FindTeam = Debug_FindTeam
-
     inst:ListenForEvent("ontrapped", OnTrapped)
     inst.settrapdata = SetBirdTrapData
 	inst.restoredatafromtrap = RestoreBirdFromTrap
@@ -327,8 +241,6 @@ local function commonfn()
     inst.IsOnBrillianceCooldown = IsOnBrillianceCooldown
     inst:DoTaskInTime(0, inst.UpdateBrillianceVisual)
 
-    inst:ListenForEvent("attacked", OnAttacked)
-    inst:ListenForEvent("threatnear", OnThreatNear)
     inst:ListenForEvent("timerdone", OnTimerDone)
     inst:ListenForEvent("death", OnDeath)
 

@@ -372,7 +372,7 @@ local function DropWetTool(inst, data)
     end
 
     local tool = inst.components.inventory:GetEquippedItem(EQUIPSLOTS.HANDS)
-	if tool and tool:GetIsWet() and not tool:HasTag("stickygrip") and math.random() < easing.inSine(TheWorld.state.wetness, 0, 0.15, inst.components.moisture:GetMaxMoisture()) then
+	if tool and tool:GetIsWet() and not tool:HasTag("stickygrip") and TryLuckRoll(inst, easing.inSine(TheWorld.state.wetness, 0, TUNING.PLAYER_DROP_WET_TOOL_CHANCE_MAX, inst.components.moisture:GetMaxMoisture()), LuckFormulas.DropWetTool) then
         local projectile =
             data.weapon ~= nil and
             data.projectile == nil and
@@ -389,7 +389,8 @@ local function DropWetTool(inst, data)
             if tool.components.inventoryitem ~= nil then
                 tool.components.inventoryitem:OnDropped()
             end
-		elseif tool ~= data.weapon then
+		elseif data.weapon and tool ~= data.weapon then
+			--weapon match only required for "attack" events, not "working"
 			return
         else
             inst.components.inventory:Unequip(EQUIPSLOTS.HANDS, true)
@@ -517,6 +518,7 @@ end
 local function OnActionFailed(inst, data)
     if inst.components.talker ~= nil
 		and not data.action.action.silent_fail
+        and (not data.action.action.silent_generic_fail or data.reason ~= nil)
         and (data.reason ~= nil or
             not data.action.autoequipped or
             inst.components.inventory.activeitem == nil) then
@@ -908,9 +910,13 @@ local function EnableMovementPrediction(inst, enable)
                 inst.components.locomotor.is_prediction_enabled = true
                 --This is unfortunate but it doesn't seem like you can send an rpc on the first
                 --frame when a character is spawned
-                inst:DoTaskInTime(0, function(inst)
-                    SendRPCToServer(RPC.SetMovementPredictionEnabled, true)
-                    end)
+				if inst._setpredictionrpctask then
+					inst._setpredictionrpctask:Cancel()
+				end
+				inst._setpredictionrpctask = inst:DoTaskInTime(0, function(inst)
+					inst._setpredictionrpctask = nil
+					SendRPCToServer(RPC.SetMovementPredictionEnabled, true)
+				end)
             end
         elseif inst.components.locomotor ~= nil then
             inst:RemoveEventCallback("cancelmovementprediction", OnCancelMovementPrediction)
@@ -926,9 +932,13 @@ local function EnableMovementPrediction(inst, enable)
             print("Movement prediction disabled")
             --This is unfortunate but it doesn't seem like you can send an rpc on the first
             --frame when a character is spawned
-            inst:DoTaskInTime(0, function(inst)
-                SendRPCToServer(RPC.SetMovementPredictionEnabled, false)
-                end)
+			if inst._setpredictionrpctask then
+				inst._setpredictionrpctask:Cancel()
+			end
+			inst._setpredictionrpctask = inst:DoTaskInTime(0, function(inst)
+				inst._setpredictionrpctask = nil
+				SendRPCToServer(RPC.SetMovementPredictionEnabled, false)
+			end)
         end
     end
 end
@@ -1052,6 +1062,10 @@ function fns.CommonSeamlessPlayerSwap(inst)
     inst.userid = ""
     if inst.components.playercontroller ~= nil then
         RemovePlayerComponents(inst)
+		if inst._setpredictionrpctask then
+			inst._setpredictionrpctask:Cancel()
+			inst._setpredictionrpctask = nil
+		end
     end
     inst:PushEvent("seamlessplayerswap")
 end
@@ -1094,6 +1108,15 @@ end
 
 function fns.MasterSeamlessPlayerSwapTarget(inst)
     fns.CommonSeamlessPlayerSwapTarget(inst)
+end
+
+function fns.OnPlayerReroll(inst)
+    if inst.components.socketholder then
+        local items = inst.components.socketholder:UnsocketEverything()
+        for _, item in ipairs(items) do
+            Launch2(item, inst, 1, 1, 0.2, 0, 4)
+        end
+    end
 end
 
 function fns.EnableLoadingProtection(inst)
@@ -1415,6 +1438,12 @@ local function OnDespawn(inst, migrationdata)
 
     if (GetGameModeProperty("drop_everything_on_despawn") or TUNING.DROP_EVERYTHING_ON_DESPAWN) and migrationdata == nil then
         inst.components.inventory:DropEverything()
+        if inst.components.socketholder then
+            local items = inst.components.socketholder:UnsocketEverything()
+            for _, item in ipairs(items) do
+                Launch2(item, inst, 1, 1, 0.2, 0, 4)
+            end
+        end
 
 		local followers = inst.components.leader.followers
 		for k, v in pairs(followers) do
@@ -1423,6 +1452,12 @@ local function OnDespawn(inst, migrationdata)
 			elseif k.components.container ~= nil then
 				k.components.container:DropEverything()
 			end
+            if k.components.socketholder then
+                local items = k.components.socketholder:UnsocketEverything()
+                for _, item in ipairs(items) do
+                    Launch2(item, k, 1, 1, 0.2, 0, 4)
+                end
+            end
 		end
     else
         inst.components.inventory:DropEverythingWithTag("irreplaceable")
@@ -1573,6 +1608,12 @@ fns.SetCameraZoomed = function(inst, iszoomed)
     end
 end
 
+fns.SetAerialCamera = function(inst, isaerial)
+	if TheWorld.ismastersim then
+		inst.player_classified.isaerialcamera:set(isaerial)
+	end
+end
+
 fns.SnapCamera = function(inst, resetrot)
     if TheWorld.ismastersim then
         --Forces a netvar to be dirty regardless of value
@@ -1642,6 +1683,60 @@ fns.SetBathingPoolCamera = function(inst, target)
 	if TheWorld.ismastersim then
 		inst.player_classified:SetBathingPoolCamera(target)
 	end
+end
+
+
+--------------------------------------------------------------------------
+
+-- Only Wx needs the effect block currently, but we can easily move the netvars to player_classified if we need in the future.
+local function SetFreezingEffectBlockModifier(inst, source, boolval, key)
+    if inst._freezingeffectblock == nil then
+        inst._freezingeffectblock = SourceModifierList(inst, false, SourceModifierList.boolean)
+    end
+    local old = inst._freezingeffectblock:Get()
+    inst._freezingeffectblock:SetModifier(source, boolval, source)
+    local newval = inst._freezingeffectblock:Get()
+    if old ~= newval then
+        inst:PushEvent("updateiceover")
+    end
+    if inst.wx78_classified ~= nil then
+        inst.wx78_classified.freezeeffectblocked:set(newval)
+    end
+end
+
+local function SetOverheatingEffectBlockModifier(inst, source, boolval, key)
+    if inst._overheatingeffectblock == nil then
+        inst._overheatingeffectblock = SourceModifierList(inst, false, SourceModifierList.boolean)
+    end
+    local old = inst._overheatingeffectblock:Get()
+    inst._overheatingeffectblock:SetModifier(source, boolval, source)
+    local newval = inst._overheatingeffectblock:Get()
+    if old ~= newval then
+        inst:PushEvent("updateheatover")
+    end
+    if inst.wx78_classified ~= nil then
+        inst.wx78_classified.overheateffectblocked:set(newval)
+    end
+end
+
+local function IsFreezingEffectBlocked(inst)
+    if inst._freezingeffectblock ~= nil then
+        return inst._freezingeffectblock:Get()
+    elseif inst.wx78_classified ~= nil then
+        return inst.wx78_classified.freezeeffectblocked:value()
+    end
+
+    return false
+end
+
+local function IsOverheatingEffectBlocked(inst)
+    if inst._overheatingeffectblock ~= nil then
+        return inst._overheatingeffectblock:Get()
+    elseif inst.wx78_classified ~= nil then
+        return inst.wx78_classified.overheateffectblocked:value()
+    end
+
+    return false
 end
 
 --------------------------------------------------------------------------
@@ -1918,7 +2013,6 @@ local function MakePlayerCharacter(name, customprefabs, customassets, common_pos
         Asset("ANIM", "anim/player_actions_cannon.zip"),
 		Asset("ANIM", "anim/player_actions_scythe.zip"),
 		Asset("ANIM", "anim/player_actions_deploytoss.zip"),
-		Asset("ANIM", "anim/player_actions_spray.zip"),
 
         Asset("ANIM", "anim/player_boat.zip"),
         Asset("ANIM", "anim/player_boat_plank.zip"),
@@ -2099,6 +2193,12 @@ local function MakePlayerCharacter(name, customprefabs, customassets, common_pos
         Asset("ANIM", "anim/player_ancient_handmaid.zip"),
         Asset("ANIM", "anim/player_ancient_architect.zip"),
         Asset("ANIM", "anim/player_ancient_mason.zip"),
+
+        Asset("ANIM", "anim/player_gallop_run.zip"),
+        Asset("ANIM", "anim/player_lancecharge.zip"),
+        Asset("ANIM", "anim/player_lancejab.zip"),
+
+		Asset("ANIM", "anim/player_actions_golf.zip"),
     }
 
     local prefabs =
@@ -2135,6 +2235,7 @@ local function MakePlayerCharacter(name, customprefabs, customassets, common_pos
 		"player_hotspring_water_fx",
 		"ocean_splash_swim1",
 		"ocean_splash_swim2",
+        "round_puff_fx_sm",
 
         -- Player specific classified prefabs
         "player_classified",
@@ -2206,6 +2307,10 @@ local function MakePlayerCharacter(name, customprefabs, customassets, common_pos
         inst.GetSeeableTilePercent = ex_fns.GetSeeableTilePercent
         inst.MakeGenericCommander = ex_fns.MakeGenericCommander
 		inst.CommandWheelAllowsGameplay = ex_fns.CommandWheelAllowsGameplay
+		inst.SetFreezingEffectBlockModifier = SetFreezingEffectBlockModifier
+		inst.SetOverheatingEffectBlockModifier = SetOverheatingEffectBlockModifier
+        inst.IsFreezingEffectBlocked = IsFreezingEffectBlocked
+		inst.IsOverheatingEffectBlocked = IsOverheatingEffectBlocked
 	end
 
     local max_range = TUNING.MAX_INDICATOR_RANGE * 1.5
@@ -2290,22 +2395,16 @@ local function MakePlayerCharacter(name, customprefabs, customassets, common_pos
         end
     end
 
-local function auratest(inst, target, can_initiate)
-
+local function auratest(inst, target)
     if target.components.minigame_participator ~= nil then
         return false
     end
 
-    if (target:HasTag("player") and not TheNet:GetPVPEnabled()) or target:HasTag("ghost") or target:HasTag("noauradamage") then
+	if (target.isplayer and not TheNet:GetPVPEnabled()) or target:HasAnyTag("ghost", "noauradamage") then
         return false
     end
 
-    if target.components.follower and target.components.follower.leader ~= nil and
-         target.components.follower.leader:HasTag("player") then
-        return false
-    end
-
-    return true
+	return not inst.components.combat:IsAlly(target)
 end
 
 
@@ -2336,45 +2435,9 @@ end
         end
         inst.AnimState:PlayAnimation("idle")
 
-        -- NOTES(JBK): Keep these in sync with wortox_decoy. [WSDCSC]
-        inst.AnimState:Hide("ARM_carry")
-        inst.AnimState:Hide("HAT")
-        inst.AnimState:Hide("HAIR_HAT")
-        inst.AnimState:Show("HAIR_NOHAT")
-        inst.AnimState:Show("HAIR")
-        inst.AnimState:Show("HEAD")
-        inst.AnimState:Hide("HEAD_HAT")
-		inst.AnimState:Hide("HEAD_HAT_NOHELM")
-		inst.AnimState:Hide("HEAD_HAT_HELM")
-
-        inst.AnimState:OverrideSymbol("fx_wipe", "wilson_fx", "fx_wipe")
-        inst.AnimState:OverrideSymbol("fx_liquid", "wilson_fx", "fx_liquid")
-        inst.AnimState:OverrideSymbol("shadow_hands", "shadow_hands", "shadow_hands")
-        inst.AnimState:OverrideSymbol("snap_fx", "player_actions_fishing_ocean_new", "snap_fx")
-        inst.AnimState:OverrideSymbol("chalice_swap_comp", "chalice_swap", "chalice_swap_comp")
-
-        --Additional effects symbols for hit_darkness animation
-        inst.AnimState:AddOverrideBuild("player_hit_darkness")
-        inst.AnimState:AddOverrideBuild("player_receive_gift")
-        inst.AnimState:AddOverrideBuild("player_actions_uniqueitem")
-        inst.AnimState:AddOverrideBuild("player_actions_uniqueitem_2")
-        inst.AnimState:AddOverrideBuild("player_wrap_bundle")
-        inst.AnimState:AddOverrideBuild("player_lunge")
-        inst.AnimState:AddOverrideBuild("player_attack_leap")
-        inst.AnimState:AddOverrideBuild("player_superjump")
-        inst.AnimState:AddOverrideBuild("player_multithrust")
-        inst.AnimState:AddOverrideBuild("player_parryblock")
-        inst.AnimState:AddOverrideBuild("player_emote_extra")
-        inst.AnimState:AddOverrideBuild("player_boat_plank")
-        inst.AnimState:AddOverrideBuild("player_boat_net")
-        inst.AnimState:AddOverrideBuild("player_boat_sink")
-        inst.AnimState:AddOverrideBuild("player_oar")
-
-        inst.AnimState:AddOverrideBuild("player_actions_fishing_ocean_new")
-        inst.AnimState:AddOverrideBuild("player_actions_farming")
-        inst.AnimState:AddOverrideBuild("player_actions_cowbell")
-
-        inst.AnimState:AddOverrideBuild("player_shadow_thrall_parasite")
+        ex_fns.SetupBaseSymbolVisibility(inst)
+        ex_fns.SetupOverrideSymbols(inst)
+        ex_fns.SetupOverrideBuilds(inst)
 
         inst.DynamicShadow:SetSize(1.3, .6)
 
@@ -2408,6 +2471,9 @@ end
 
 		SetInstanceFunctions(inst)
 
+		inst.footstepoverridefn = ex_fns.FootstepOverrideFn
+		inst.foleyoverridefn = ex_fns.FoleyOverrideFn
+
         inst.foleysound = nil --Characters may override this in common_postinit
         inst.playercolour = DEFAULT_PLAYER_COLOUR --Default player colour used in case it doesn't get set properly
         inst.ghostenabled = GetGhostEnabled()
@@ -2426,6 +2492,7 @@ end
         inst:ListenForEvent("local_seamlessplayerswaptarget", fns.LocalSeamlessPlayerSwapTarget)
         inst:ListenForEvent("master_seamlessplayerswap", fns.MasterSeamlessPlayerSwap)
         inst:ListenForEvent("master_seamlessplayerswaptarget", fns.MasterSeamlessPlayerSwapTarget)
+        inst:ListenForEvent("ms_playerreroll", fns.OnPlayerReroll)
 
         inst:AddComponent("talker")
         inst.components.talker:SetOffsetFn(GetTalkerOffset)
@@ -2436,6 +2503,17 @@ end
         inst:AddComponent("playervision")
         inst:AddComponent("areaaware")
         inst.components.areaaware:SetUpdateDist(.45)
+
+		--use for player runspeed modifiers that should be ignored when mounted
+		--e.g. character specific things:
+		--       -wx speed chip
+		--       -wormwood bloom level
+		--       -wolfgang skilltree for normal size speedup
+		--     stategraph specific things:
+		--       -wonkey running
+		--       -galloping
+		inst:AddComponent("playerspeedmult")
+		inst.components.playerspeedmult:SetSpeedMultCap(2)
 
         inst:AddComponent("attuner")
         --attuner server listeners are not registered until after "ms_playerjoined" has been pushed
@@ -2517,7 +2595,6 @@ end
             inst:ListenForEvent("localplayer._shadowportalmax", OnShadowPortalMax)
             inst:ListenForEvent("localplayer._hermit_music", OnHermitMusic)
             
-
             inst:AddComponent("hudindicatable")
             inst.components.hudindicatable:SetShouldTrackFunction(ShouldTrackfn)
         end
@@ -2531,13 +2608,10 @@ end
         inst._piratemusicstate = net_bool(inst.GUID, "player.piratemusicstate", "piratemusicstatedirty")
         inst._piratemusicstate:set(false)
         inst:ListenForEvent("piratemusicstatedirty", OnPirateMusicStateDirty)
-
         
         inst:ListenForEvent("parasiteoverlaydirty", OnParasiteOverlayDirty)
         inst:ListenForEvent("healthbarbuffsymboldirty", OnHealthbarBuffSymbolDirty)
         inst:ListenForEvent("blackoutdirty", OnBlackoutDirty)
-        
-
 
         inst.PostActivateHandshake = ex_fns.PostActivateHandshake
         inst.OnPostActivateHandshake_Client = ex_fns.OnPostActivateHandshake_Client
@@ -2547,6 +2621,7 @@ end
         inst.SynchronizeOneClientAuthoritativeSetting = ex_fns.SynchronizeOneClientAuthoritativeSetting
 
         inst.entity:SetPristine()
+
         if not TheWorld.ismastersim then
             return inst
         end
@@ -2583,6 +2658,7 @@ end
         inst.player_classified.entity:SetParent(inst.entity)
 
         inst.components.boatcannonuser:SetClassified(inst.player_classified)
+		inst.components.playerspeedmult:SetClassified(inst.player_classified)
 
         inst:ListenForEvent("death", ex_fns.OnPlayerDeath)
         if inst.ghostenabled then
@@ -2794,6 +2870,13 @@ end
 
         inst:AddComponent("experiencecollector")
 
+		inst:AddComponent("joustuser")
+		inst.components.joustuser:SetOnStartJoustFn(ex_fns.OnStartJoust)
+		inst.components.joustuser:SetOnEndJoustFn(ex_fns.OnEndJoust)
+		inst.components.joustuser:SetEdgeDistance(2)
+
+        inst:AddComponent("luckuser")
+
         -------------------------------------
 
         local aura = inst:AddComponent("aura")
@@ -2825,6 +2908,7 @@ end
         inst.AddCameraExtraDistance = fns.AddCameraExtraDistance
         inst.RemoveCameraExtraDistance = fns.RemoveCameraExtraDistance
         inst.SetCameraZoomed = fns.SetCameraZoomed
+		inst.SetAerialCamera = fns.SetAerialCamera
         inst.SnapCamera = fns.SnapCamera
         inst.ScreenFade = fns.ScreenFade
         inst.ScreenFlash = fns.ScreenFlash

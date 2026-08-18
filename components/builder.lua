@@ -99,8 +99,7 @@ function Builder:OnLoad(data)
     if data.buffered_builds ~= nil then
         for k, v in pairs(AllRecipes) do
             if data.buffered_builds[k] ~= nil and IsRecipeValid(v.name) then
-                self.inst.replica.builder:SetIsBuildBuffered(v.name, true)
-                self.buffered_builds[k] = true
+                self:SetBuildBuffered(v.name, true)
             end
         end
     end
@@ -244,7 +243,7 @@ function Builder:EvaluateTechTrees()
 			and self.override_current_prototyper:HasTags(PROTOTYPER_TAGS) 
 			and not self.override_current_prototyper:HasOneOfTags(self.exclude_tags)
 			and (self.override_current_prototyper.components.prototyper.restrictedtag == nil or self.inst:HasTag(self.override_current_prototyper.components.prototyper.restrictedtag))
-			and self.inst:IsNear(self.override_current_prototyper, TUNING.RESEARCH_MACHINE_DIST)
+			and self.override_current_prototyper.components.prototyper:CanUsePrototyper(self.inst)
 			then
 
 			ents = {self.override_current_prototyper}
@@ -280,7 +279,21 @@ function Builder:EvaluateTechTrees()
 							local recipe = GetValidRecipe(recname)
 							if recipe and recipe.nounlock then
 								--only nounlock recipes can be unlocked via crafting station
-								self.station_recipes[recname] = v.components.craftingstation:GetRecipeCraftingLimit(recipe.name) or true
+                                local has_unlocked_skin = false
+                                if recipe.unlocks_from_skin and (recipe.unlocks_from_skin == SKINUNLOCKS.CRAFTINGSTATION) and self.inst.isplayer then
+                                    local prefabskins = PREFAB_SKINS[recipe.product]
+                                    if prefabskins ~= nil then
+                                        for _, skin in ipairs(prefabskins) do
+                                            if TheInventory:CheckClientOwnership(self.inst.userid, skin) then
+                                                has_unlocked_skin = true
+                                                break
+                                            end
+                                        end
+                                    end
+                                else
+                                    has_unlocked_skin = true
+                                end
+                                self.station_recipes[recname] = v.components.craftingstation:GetRecipeCraftingLimit(recipe.name) or has_unlocked_skin or nil
 							end
 						end
 					end
@@ -405,12 +418,14 @@ function Builder:EvaluateTechTrees()
 		if self.override_current_prototyper ~= self.current_prototyper then
 			self.override_current_prototyper = nil
 		elseif self.override_current_prototyper ~= old_prototyper then
-			self.inst.replica.builder:OpenCraftingMenu()
+            if not self.override_current_prototyper.components.prototyper or not self.override_current_prototyper.components.prototyper.dontopencraftingmenuonevaulatetechtrees then
+			    self.inst.replica.builder:OpenCraftingMenu()
+            end
 		end
 	end
 end
 
-function Builder:UsePrototyper(prototyper)
+function Builder:UsePrototyper(prototyper, dontopencraftingmenu)
 	if self.inst.player_classified and not self.inst.player_classified.iscraftingenabled:value() then
 		return false
 	elseif prototyper then
@@ -426,7 +441,9 @@ function Builder:UsePrototyper(prototyper)
 
 	self.override_current_prototyper = prototyper
 	if prototyper ~= nil and prototyper == self.current_prototyper then
-		self.inst.replica.builder:OpenCraftingMenu()
+        if not dontopencraftingmenu then
+		    self.inst.replica.builder:OpenCraftingMenu()
+        end
 	end
 	return true
 end
@@ -443,11 +460,11 @@ function Builder:RemoveRecipe(recname)
 	self.inst.replica.builder:RemoveRecipe(recname)
 end
 
-function Builder:UnlockRecipe(recname)
+function Builder:UnlockRecipe(recname, nosanity)
     local recipe = GetValidRecipe(recname)
     if recipe ~= nil and not recipe.nounlock then
     --print("Unlocking: ", recname)
-        if self.inst.components.sanity ~= nil then
+        if self.inst.components.sanity ~= nil and not nosanity then
             self.inst.components.sanity:DoDelta(TUNING.SANITY_MED)
         end
         self:AddRecipe(recname)
@@ -503,6 +520,7 @@ function Builder:CheckIngredientsForMimic(ingredients)
     for _, ents in pairs(ingredients) do
         for item in pairs(ents) do
             if item.components.itemmimic then
+                -- Do not check ShouldItemMimicBeRevealedFor here, ingredients must be earned.
                 item.components.itemmimic:TurnEvil(self.inst)
                 return true
             end
@@ -517,6 +535,7 @@ function Builder:CheckDiscountEquipsForMimic()
     if self.inst.components.inventory then
         for slot, item in pairs(self.inst.components.inventory.equipslots) do
             if item and item.prefab == "greenamulet" and item.components.itemmimic then
+                -- Do not check ShouldItemMimicBeRevealedFor here, ingredients must be earned.
                 item.components.itemmimic:TurnEvil(self.inst)
                 return true
             end
@@ -608,7 +627,7 @@ function Builder:HasTechIngredient(ingredient)
 end
 
 function Builder:MakeRecipe(recipe, pt, rot, skin, onsuccess)
-    if recipe ~= nil and not self.inst.sg:HasAnyStateTag("drowning", "falling", "floating") then -- TODO(JBK): This should be refactored to not do the state checks here.
+	if recipe and not self.inst.sg:HasAnyStateTag("drowning", "falling", "floating", "nointerrupt", "nopredict", "pausepredict") then -- TODO(JBK): This should be refactored to not do the state checks here.
         self.inst:PushEvent("makerecipe", { recipe = recipe })
         if self:IsBuildBuffered(recipe.name) or self:HasIngredients(recipe) then
             self.inst.components.locomotor:Stop()
@@ -658,8 +677,11 @@ function Builder:DoBuild(recname, pt, rotation, skin)
             return false
         end
 
+        if recipe.unlocks_from_skin and not skin then
+            return false
+        end
         if recipe.canbuild ~= nil then
-			local success, msg = recipe.canbuild(recipe, self.inst, pt, rotation, self.current_prototyper)
+			local success, msg = recipe.canbuild(recipe, self.inst, pt, rotation, self.current_prototyper, skin)
 			if not success then
 				return false, msg
 			end
@@ -667,8 +689,7 @@ function Builder:DoBuild(recname, pt, rotation, skin)
 
 		local is_buffered_build = self.buffered_builds[recname] ~= nil
         if is_buffered_build then
-            self.buffered_builds[recname] = nil
-            self.inst.replica.builder:SetIsBuildBuffered(recname, false)
+            self:SetBuildBuffered(recname, false)
         end
 
         if self.inst:HasTag("hungrybuilder") and not self.inst.sg:HasStateTag("slowaction") and not self.inst.sg:HasStateTag("giving") then
@@ -798,6 +819,9 @@ function Builder:DoBuild(recname, pt, rotation, skin)
                 --     have not been updated to support placement rotation yet
                 prod.Transform:SetRotation(rotation or 0)
                 self.inst:PushEvent("buildstructure", { item = prod, recipe = recipe, skin = skin })
+                if self.current_prototyper ~= nil and self.current_prototyper:IsValid() then
+                    self.current_prototyper:PushEvent("buildstructure", { item = prod, recipe = recipe, skin = skin })
+                end
                 prod:PushEvent("onbuilt", { builder = self.inst, pos = pt })
                 ProfileStatsAdd("build_"..prod.prefab)
                 NotifyPlayerProgress("TotalItemsCrafted", 1, self.inst)
@@ -820,9 +844,27 @@ function Builder:KnowsRecipe(recipe, ignore_tempbonus, cached_tech_trees)
 	end
     if recipe == nil then
         return false
-	elseif self.freebuildmode then
+	elseif self.freebuildmode and not PREFAB_SKINS_SHOULD_NOT_SELECT[recipe.product] then
 		return true
 	end
+
+    local has_unlocked_skin = false
+    if recipe.unlocks_from_skin and self.inst.isplayer then
+        local prefabskins = PREFAB_SKINS[recipe.product]
+        if prefabskins ~= nil then
+            for _, skin in ipairs(prefabskins) do
+                if TheInventory:CheckClientOwnership(self.inst.userid, skin) then
+                    has_unlocked_skin = true
+                    if recipe.unlocks_from_skin == SKINUNLOCKS.ALWAYS then
+                        return true
+                    end
+                end
+            end
+        end
+        if recipe.unlocks_from_skin == SKINUNLOCKS.ALWAYS then
+            return false
+        end
+    end
 
 	--the following builder_tag/skill checks are require due to character swapping
 	if (recipe.builder_tag and not self.inst:HasTag(recipe.builder_tag)) or
@@ -839,10 +881,16 @@ function Builder:KnowsRecipe(recipe, ignore_tempbonus, cached_tech_trees)
 	--
 
 	if self.station_recipes[recipe.name] or table.contains(self.recipes, recipe.name) then
-		return true
+        if recipe.unlocks_from_skin then
+            return has_unlocked_skin
+        end
+        return true
 	end
 
     if cached_tech_trees and cached_tech_trees[recipe.level] ~= nil then
+        if recipe.unlocks_from_skin then
+            return has_unlocked_skin and cached_tech_trees[recipe.level]
+        end
         return cached_tech_trees[recipe.level]
     end
     for i, v in ipairs(TechTree.AVAILABLE_TECH) do
@@ -861,6 +909,9 @@ function Builder:KnowsRecipe(recipe, ignore_tempbonus, cached_tech_trees)
     if cached_tech_trees then
         cached_tech_trees[recipe.level] = true
     end
+    if recipe.unlocks_from_skin then
+        return has_unlocked_skin
+    end
     return true
 end
 
@@ -872,6 +923,9 @@ function Builder:HasIngredients(recipe)
 		if self.freebuildmode then
 			return true
 		end
+        if recipe.getlimitedrecipecount and recipe:getlimitedrecipecount(self.inst) <= 0 then
+            return false
+        end
 		for i, v in ipairs(recipe.ingredients) do
             if not self.inst.components.inventory:Has(v.type, math.max(1, RoundBiasedUp(v.amount * self.ingredientmod)), true) then
 				return false
@@ -942,7 +996,7 @@ local function _TryMakeIngredientRecipe(self, ing_recipe)
 	if self:KnowsRecipe(ing_recipe) then
 		canaccess = true
 		if self:HasIngredients(ing_recipe) then
-			self:MakeRecipe(ing_recipe, nil, nil, ValidateRecipeSkinRequest(self.inst.userid, ing_recipe.product, nil),
+			success = self:MakeRecipe(ing_recipe, nil, nil, ValidateRecipeSkinRequest(self.inst.userid, ing_recipe.product, nil),
 				function()
 					if usingtempbonus then
 						self:ConsumeTempTechBonuses()
@@ -966,12 +1020,11 @@ local function _TryMakeIngredientRecipe(self, ing_recipe)
 					end
 				end
 			)
-			success = true
 		end
 	elseif canlearn and CanPrototypeRecipe(ing_recipe.level, self.accessible_tech_trees) then
 		canaccess = true
 		if self:HasIngredients(ing_recipe) then
-			self:MakeRecipe(ing_recipe, nil, nil, ValidateRecipeSkinRequest(self.inst.userid, ing_recipe.product, nil),
+			success = self:MakeRecipe(ing_recipe, nil, nil, ValidateRecipeSkinRequest(self.inst.userid, ing_recipe.product, nil),
 				function()
 					if usingtempbonus then
 						self:ConsumeTempTechBonuses()
@@ -980,7 +1033,6 @@ local function _TryMakeIngredientRecipe(self, ing_recipe)
 					self:UnlockRecipe(ing_recipe.name)
 				end
 			)
-			success = true
 		end
 	end
 	return success, canaccess
@@ -1066,9 +1118,14 @@ function Builder:MakeRecipeAtPoint(recipe, pt, rot, skin)
     if recipe.placer ~= nil and
 		(recipe.always_allow_buffered_placer or self:KnowsRecipe(recipe)) and
         self:IsBuildBuffered(recipe.name) and
-        TheWorld.Map:CanDeployRecipeAtPoint(pt, recipe, rot) then
+        TheWorld.Map:CanDeployRecipeAtPoint(pt, recipe, rot, self.inst) then
         self:MakeRecipe(recipe, pt, rot, skin)
     end
+end
+
+function Builder:SetBuildBuffered(recname, boolval)
+    self.buffered_builds[recname] = boolval or nil
+    self.inst.replica.builder:SetIsBuildBuffered(recname, boolval or false)
 end
 
 function Builder:BufferBuild(recname)
@@ -1121,8 +1178,7 @@ function Builder:BufferBuild(recname)
 		end
 
         self:RemoveIngredients(materials, recname, discounted)
-        self.buffered_builds[recname] = true
-        self.inst.replica.builder:SetIsBuildBuffered(recname, true)
+        self:SetBuildBuffered(recname, true)
     end
 end
 

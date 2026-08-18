@@ -47,7 +47,8 @@ local function DoUpdate(inst)
 	local self = inst.components.inventoryitemmoisture
 	local dt = self.moistureupdatetask.period
 	local nextdt = self:UpdateMoisture(dt) and UPDATE_TIME or SLOW_UPDATE_TIME
-	if dt ~= nextdt then
+	-- The entity could become invalid from UpdateMoisture, if something external deleted it from the onmoisturedeltacallback callback.
+	if dt ~= nextdt and inst:IsValid() then
 		self.moistureupdatetask:Cancel()
 		self.moistureupdatetask = inst:DoPeriodicTask(nextdt, DoUpdate)
 	end
@@ -59,8 +60,6 @@ end
 
 local InventoryItemMoisture = Class(function(self, inst)
     self.inst = inst
-
-    self.lastUpdate = GetTime()
 
     self._replica = nil
     --Don't initialize .moisture and .iswet until we have a link to inventoryitem replica
@@ -203,16 +202,23 @@ function InventoryItemMoisture:GetTargetMoisture()
 			if parent == nil then
 				--no more parent, so use our current exposedroot
 				break
-			elseif parent.components.container and parent.components.container.isexposed then
-				exposedroot = parent
-			else
-				--our parent is an unexposed container or inventory
+			elseif parent.components.container then
+				if parent.components.container.isexposed then
+					exposedroot = parent
+				else
+					--our parent is an unexposed container
+					exposedroot = nil
+					break
+				end
+			else--if parent.components.inventory then
+				--our parent is inventory, treat as our direct owner, wetness depends on moisture component if available
+				owner = parent
 				exposedroot = nil
 				break
 			end
 		end
 	end
-	local value = (self.inst.components.floater ~= nil and self.inst.components.floater.showing_effect and TUNING.MAX_WETNESS)
+	local value = (self.inst.components.floater ~= nil and self.inst.components.floater:IsFloating() and TUNING.MAX_WETNESS)
 		or (exposedroot and (TheWorld.state.israining and exposedroot.components.rainimmunity == nil and TheWorld.state.wetness or 0))
         or (owner.components.moisture ~= nil and owner.components.moisture:GetMoisture())
         or 0

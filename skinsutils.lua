@@ -50,6 +50,7 @@ local function GetSpecialItemCategories()
 		MISC_ITEMS,
 		CLOTHING,
 		EMOTE_ITEMS,
+        IDLEANIMATIONS_ITEMS,
 		EMOJI_ITEMS,
 		BEEFALO_CLOTHING,
 	}
@@ -648,6 +649,12 @@ function GetEventIconForItem(item)
 	return nil
 end
 
+local SKIN_NAME_REDIRECTS = {
+    -- NOTES(JBK): This is a hack for a discrepency between itemdefs and what the game has for the prefab naming.
+    -- Instead of adjusting the game the itemdef should be changed but it is too late for that now.
+    wx78_drone_delivery_small = "wx78_drone_delivery",
+}
+
 function GetSkinUsableOnString(item_type, popup_txt)
 	local skin_data = GetSkinData(item_type)
 
@@ -655,8 +662,29 @@ function GetSkinUsableOnString(item_type, popup_txt)
 
 	local usable_on_str
 	if skin_data ~= nil and skin_data.base_prefab ~= nil then
+        local skin_only_item = CRAFTING_RECIPE_UNLOCKED_SKIN[item_type]
+        if not skin_only_item then
+            local recipe = AllRecipes[skin_data.base_prefab]
+            if not recipe then
+                if skin_data.granted_items then
+                    local granted_skin_data = GetSkinData(skin_data.granted_items[1])
+                    if granted_skin_data then
+                        recipe = AllRecipes[granted_skin_data.base_prefab]
+                    end
+                end
+            end
+            if recipe and recipe.unlocks_from_skin then
+                skin_only_item = true
+            end
+        end
         local item1_str, item2_str, item3_str
         item1_str = STRINGS.NAMES[string.upper(skin_data.base_prefab)]
+        if not item1_str then
+            local redirect = SKIN_NAME_REDIRECTS[skin_data.base_prefab]
+            if redirect then
+                item1_str = STRINGS.NAMES[string.upper(redirect)]
+            end
+        end
         if skin_data.granted_items ~= nil then
             local granted_skin_data = GetSkinData(skin_data.granted_items[1])
             if granted_skin_data ~= nil and granted_skin_data.base_prefab ~= nil then
@@ -677,7 +705,11 @@ function GetSkinUsableOnString(item_type, popup_txt)
             end
         end
         if item2_str == nil then
-            usable_on_str = subfmt(popup_txt and STRINGS.UI.SKINSSCREEN.USABLE_ON_POPUP or STRINGS.UI.SKINSSCREEN.USABLE_ON, { skin = skin_str, item = item1_str })
+            if skin_only_item then
+                usable_on_str = subfmt(popup_txt and STRINGS.UI.SKINSSCREEN.ALLOWS_CRAFTING_POPUP or STRINGS.UI.SKINSSCREEN.ALLOWS_CRAFTING, { skin = skin_str, item = item1_str })
+            else
+                usable_on_str = subfmt(popup_txt and STRINGS.UI.SKINSSCREEN.USABLE_ON_POPUP or STRINGS.UI.SKINSSCREEN.USABLE_ON, { skin = skin_str, item = item1_str })
+            end
         elseif item3_str == nil then
             usable_on_str = subfmt(popup_txt and STRINGS.UI.SKINSSCREEN.USABLE_ON_MULTIPLE_POPUP or STRINGS.UI.SKINSSCREEN.USABLE_ON_MULTIPLE, { skin = skin_str, item1 = item1_str, item2 = item2_str })
         else
@@ -792,6 +824,8 @@ function DoesItemHaveTag(item, tag)
 		tags = MISC_ITEMS[item].skin_tags
 	elseif EMOTE_ITEMS[item] then
 		tags = EMOTE_ITEMS[item].skin_tags
+    elseif IDLEANIMATIONS_ITEMS[item] then
+        tags = IDLEANIMATIONS_ITEMS[item].skin_tags
 	else
 		if Prefabs[item] ~= nil then
 			tags = Prefabs[item].skin_tags
@@ -1346,6 +1380,11 @@ function ShouldDisplayItemInCollection(item_type)
 	if ITEM_DISPLAY_BLACKLIST[item_type] then
         return false
     end
+    if SKINOVERRIDES[item_type] then
+        if not TheInventory:CheckOwnership(item_type) then
+            return false
+        end
+    end
 	local rarity = GetRarityForItem(item_type)
 	if rarity == "Event" or rarity == "ProofOfPurchase" or rarity == "Resurrected" or rarity == "Loyal" or rarity == "Timeless" then
 		return TheInventory:CheckOwnership(item_type)
@@ -1374,7 +1413,7 @@ function IsDefaultSkinOwned( item_key )
 end
 
 function IsDefaultSkin( item_key )
-    return IsDefaultClothing( item_key ) or IsDefaultBeefClothing( item_key ) or IsDefaultCharacterSkin( item_key )
+    return IsDefaultClothing( item_key ) or IsDefaultBeefClothing( item_key ) or IsDefaultMisc( item_key ) or IsDefaultCharacterSkin( item_key )
 end
 
 function IsPrefabSkinned( prefab )
@@ -1541,6 +1580,9 @@ function GetNextOwnedSkin(prefab, cur_skin)
 			end
 		end
 	end
+    if not new_skin and PREFAB_SKINS_SHOULD_NOT_SELECT[prefab] then
+        new_skin = cur_skin
+    end
 	return new_skin
 end
 
@@ -1564,6 +1606,9 @@ function GetPrevOwnedSkin(prefab, cur_skin)
 			end
 		end
 	end
+    if not new_skin and PREFAB_SKINS_SHOULD_NOT_SELECT[prefab] then
+        new_skin = cur_skin
+    end
 	return new_skin
 end
 

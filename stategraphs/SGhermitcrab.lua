@@ -582,7 +582,7 @@ local states =
                 return
             end
 
-            if inst.sg.mem.teleporting and not inst.components.npc_talker:haslines() then
+            if inst.sg.mem.teleporting and not inst.components.npc_talker:HasLines() then
                 inst.sg:GoToState("dancebusy")
                 return
             end
@@ -2038,8 +2038,8 @@ local states =
             if inst.itemstotoss then
                 inst.sg:GoToState("tossitem")
             else
-                if inst.components.npc_talker:haslines() then
-                    inst.components.npc_talker:donextline()
+                if inst.components.npc_talker:HasLines() then
+                    inst.components.npc_talker:DoNextLine()
                     inst.sg:GoToState("talkto")
                 else
                     inst.sg:GoToState("idle")
@@ -2538,8 +2538,8 @@ local states =
                 if inst.itemstotoss then
                     inst.sg:GoToState("tossitem")
                 else
-                    if inst.components.npc_talker:haslines() then
-                        inst.components.npc_talker:donextline()
+                    if inst.components.npc_talker:HasLines() then
+                        inst.components.npc_talker:DoNextLine()
                         inst.sg:GoToState("talkto")
                     else
                        inst.sg:GoToState("idle")
@@ -2596,8 +2596,8 @@ local states =
         events =
         {
             EventHandler("animqueueover", function(inst)
-                if inst.components.npc_talker:haslines() then
-                    inst.components.npc_talker:donextline()
+                if inst.components.npc_talker:HasLines() then
+                    inst.components.npc_talker:DoNextLine()
                     inst.sg:GoToState("talkto")
                 else
                     inst.sg:GoToState("idle")
@@ -3385,7 +3385,7 @@ local states =
 
     State{
         name = "oceanfishing_idle",
-        tags = { "npc_fishing", "canrotate" },
+		tags = { "npc_fishing"--[[, "canrotate"]] },
 
         onenter = function(inst)
             inst:AddTag("fishing_idle")
@@ -3442,7 +3442,7 @@ local states =
 
     State{
         name = "oceanfishing_reel",
-        tags = { "npc_fishing", "doing", "reeling", "canrotate" },
+		tags = { "npc_fishing", "doing", "reeling"--[[, "canrotate"]] },
 
         onenter = function(inst)
             inst:AddTag("fishing_idle")
@@ -5254,7 +5254,7 @@ local states =
 
 CommonStates.AddSimpleState(states, "refuse", "idle_loop", { "busy" })
 CommonStates.AddSimpleActionState(states, "pickup", "pickup", 10 * FRAMES, { "busy" })
-CommonStates.AddElectrocuteStates(states)
+CommonStates.AddElectrocuteStates(states, nil, { loop = "hermitcrab_shock_loop", pst = "hermitcrab_shock_pst" })
 CommonStates.AddSinkAndWashAshoreStates(states, {washashore = "hit"})
 CommonStates.AddVoidFallStates(states, {voiddrop = "hit"})
 

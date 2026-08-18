@@ -128,7 +128,9 @@ local function TossDebris(inst)
 			local cos_theta = math.cos(theta)
 			local sin_theta = math.sin(theta)
 			local speed = 2 + math.random() * 2
-			v.Physics:Teleport(x + cos_theta * radius, 1, z - sin_theta * radius)
+			if not TryTeleportToLaunchPos(v, x + cos_theta * radius, 1, z - sin_theta * radius) then
+				v.Physics:Teleport(x, 1, z)
+			end
 			v.Physics:SetVel(speed * cos_theta, 2 + math.random() * 2, -speed * sin_theta)
 			v.AnimState:PlayAnimation("rock_float_0"..tostring(v.variation))
 		end
@@ -147,7 +149,9 @@ local function DropDebris(inst)
 			local cos_theta = math.cos(theta)
 			local sin_theta = math.sin(theta)
 			local speed = 2 + math.random() * 2
-			v.Physics:Teleport(x + cos_theta * radius, 0, z - sin_theta * radius)
+			if not TryTeleportToLaunchPos(v, x + cos_theta * radius, 0, z - sin_theta * radius) then
+				v.Physics:Teleport(x, 0, z)
+			end
 			v.Physics:SetVel(speed * cos_theta, 0, -speed * sin_theta)
 			v.AnimState:PlayAnimation("rock_float_0"..tostring(v.variation))
 		end
@@ -463,6 +467,7 @@ local function fn()
 
 	inst:AddComponent("gestaltcapturable")
 	inst.components.gestaltcapturable:SetLevel(2)
+    inst.components.gestaltcapturable:SetIsPlanar(true)
 	inst.components.gestaltcapturable:SetOnCapturedFn(OnCaptured)
 
 	inst.debris = nil

@@ -186,12 +186,19 @@ local function snowball_fn()
     inst.components.wateryprotection.witherprotectiontime = TUNING.FIRESUPPRESSOR_PROTECTION_TIME
     inst.components.wateryprotection.addcoldness = TUNING.FIRESUPPRESSOR_ADD_COLDNESS
     inst.components.wateryprotection:AddIgnoreTag("player")
+    inst.components.wateryprotection:AddIgnoreTag("shadow_fire")
 
     return inst
 end
 
 local function onequip(inst, owner)
-    owner.AnimState:OverrideSymbol("swap_object", "swap_waterballoon", "swap_waterballoon")
+    local skin_build = inst:GetSkinBuild()
+    if skin_build ~= nil then
+        owner:PushEvent("equipskinneditem", inst:GetSkinName())
+        owner.AnimState:OverrideItemSkinSymbol("swap_object", skin_build, "swap_waterballoon", inst.GUID, "swap_waterballoon")
+    else
+        owner.AnimState:OverrideSymbol("swap_object", "swap_waterballoon", "swap_waterballoon")
+    end
     owner.AnimState:Show("ARM_carry")
     owner.AnimState:Hide("ARM_normal")
 end
@@ -199,6 +206,10 @@ end
 local function onunequip(inst, owner)
     owner.AnimState:Hide("ARM_carry")
     owner.AnimState:Show("ARM_normal")
+    local skin_build = inst:GetSkinBuild()
+    if skin_build ~= nil then
+        owner:PushEvent("unequipskinneditem", inst:GetSkinName())
+    end
 end
 
 local function onthrown(inst)
@@ -272,6 +283,7 @@ local function waterballoon_fn()
     inst.components.wateryprotection.temperaturereduction = TUNING.WATERBALLOON_TEMP_REDUCTION
     inst.components.wateryprotection.witherprotectiontime = TUNING.WATERBALLOON_PROTECTION_TIME
     inst.components.wateryprotection.addwetness = TUNING.WATERBALLOON_ADD_WETNESS
+    inst.components.wateryprotection:AddIgnoreTag("shadow_fire")
 
     inst:AddComponent("weapon")
     inst.components.weapon:SetDamage(0)
@@ -319,6 +331,7 @@ local function ink_fn()
     inst.components.wateryprotection.witherprotectiontime = TUNING.FIRESUPPRESSOR_PROTECTION_TIME
     inst.components.wateryprotection.addcoldness = TUNING.FIRESUPPRESSOR_ADD_COLDNESS
     inst.components.wateryprotection:AddIgnoreTag("player")
+    inst.components.wateryprotection:AddIgnoreTag("shadow_fire")
 
     return inst
 end
@@ -353,6 +366,7 @@ local function waterstreak_fn()
     inst.components.wateryprotection.extinguishheatpercent = TUNING.FIRESUPPRESSOR_EXTINGUISH_HEAT_PERCENT
     inst.components.wateryprotection.addwetness = TUNING.WATERBALLOON_ADD_WETNESS
     inst.components.wateryprotection:AddIgnoreTag("player")
+    inst.components.wateryprotection:AddIgnoreTag("shadow_fire")
 
     return inst
 end
@@ -379,6 +393,7 @@ local function bile_fn()
     inst.components.wateryprotection.witherprotectiontime = TUNING.FIRESUPPRESSOR_PROTECTION_TIME
     inst.components.wateryprotection.addcoldness = TUNING.FIRESUPPRESSOR_ADD_COLDNESS
     inst.components.wateryprotection:AddIgnoreTag("player")
+    inst.components.wateryprotection:AddIgnoreTag("shadow_fire")
 
     return inst
 end

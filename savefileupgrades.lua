@@ -1393,6 +1393,26 @@ t = {
                 FlagForRetrofitting_Forest(savedata, "hermitcrab_relocation_change")
             end,
         },
+        {
+            version = 5.21, -- Redo 5.19 patch, there was a case where pearl scoring didn't activate due to being moved before upgraded to house with decoration score component
+            fn = function(savedata)
+                FlagForRetrofitting_Forest(savedata, "retrofit_enable_pearl_score")
+            end,
+        },
+        {
+            version = 5.22, -- Repopulate Node Id Tile Map due to change of removing land restriction from engine functionality
+            fn = function(savedata)
+                if savedata ~= nil and savedata.map ~= nil then
+					savedata.retrofit_nodeidtilemap = true
+				end
+            end,
+        },
+        {
+            version = 5.23, -- Add 1 vault_orb to maps due to irreplaceable tags being added and reset method changing needing one.
+            fn = function(savedata)
+                FlagForRetrofitting_Cave(savedata, "retrofit_add_one_vault_orb")
+            end,
+        },
     },
 }
 

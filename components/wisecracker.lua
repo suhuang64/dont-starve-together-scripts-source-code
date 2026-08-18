@@ -374,6 +374,29 @@ local Wisecracker = Class(function(self, inst)
 		end
 	end)
 
+    local last_yoth_cooldown = -999
+    local yoth_cooldown_task
+    local function do_yoth_cooldown(inst)
+        yoth_cooldown_task = nil
+        inst.components.talker:Say(GetString(inst, "ANNOUNCE_YOTH_ONCOOLDOWN"))
+    end
+    inst:ListenForEvent("yoth_oncooldown", function(inst)
+        if yoth_cooldown_task == nil then
+            local t = GetTime()
+            if last_yoth_cooldown + 10 < t then
+                last_yoth_cooldown = t
+                yoth_cooldown_task = inst:DoTaskInTime(2 + math.random(), do_yoth_cooldown)
+            end
+        end
+    end)
+    inst:ListenForEvent("yoth_oncooldown_cancel", function(inst)
+        if yoth_cooldown_task ~= nil then
+            yoth_cooldown_task:Cancel()
+            yoth_cooldown_task = nil
+            last_yoth_cooldown = -999
+        end
+    end)
+
 	if inst:HasTag("dogrider") then
 		local lasttalktowobytime = 0
 		local lastwobymsg = nil
@@ -420,6 +443,64 @@ local Wisecracker = Class(function(self, inst)
 			inst.components.talker:Say(GetString(inst, "ANNOUNCE_LIGHTSOUT_SHADOWHAND"))
 		end
 	end)
+
+	inst:ListenForEvent("ms_maxclockworks", function(inst, target)
+		inst.components.talker:Say(GetString(inst, "ANNOUNCE_MAX_CLOCKWORKS"))
+	end)
+    
+    local lastmisted
+    local mistedtask
+    local function ondeconmisted(inst)
+        mistedtask = nil
+        inst.components.talker:Say(GetString(inst, "ANNOUNCE_GOT_DECON_MISTED"))
+    end
+    inst:ListenForEvent("got_decon_misted", function(inst)
+        local t = GetTime()
+        if lastmisted == nil or lastmisted + 15 < t then
+            lastmisted = t
+            if mistedtask then
+                mistedtask:Cancel()
+            end
+            mistedtask = inst:DoTaskInTime(0.5 + math.random() * 0.5, ondeconmisted)
+        end
+    end)
+
+	local lastshadowassist
+	local shadowassisttask
+	local function onshadowassisted(inst)
+		shadowassisttask = nil
+		if TheWorld.Map:IsPointInVaultRoom(inst.Transform:GetWorldPosition()) then
+			inst.components.talker:Say(GetString(inst, "ANNOUNCE_VAULT_SHADOW_ASSIST"))
+		end
+	end
+	inst:ListenForEvent("ms_vaultshadowassist", function(inst)
+		local t = GetTime()
+		if lastshadowassist == nil or lastshadowassist + 90 < t then
+			lastshadowassist = t
+			if shadowassisttask then
+				shadowassisttask:Cancel()
+			end
+			shadowassisttask = inst:DoTaskInTime(2 + math.random() * 2, onshadowassisted)
+		end
+	end)
+
+	local lastsparkfollow
+	local sparkfollowtask
+	local function onsecuritysparkfollow(inst)
+		sparkfollowtask = nil
+        inst.components.talker:Say(GetString(inst, "ANNOUNCE_SECURITY_PULSE_FOLLOWING"))
+	end
+    inst:ListenForEvent("ms_securitysparkfollowing", function(inst)
+		local t = GetTime()
+		if lastsparkfollow == nil or lastsparkfollow + 100 < t
+            and (inst.components.leader == nil or (inst.components.leader:CountFollowers("power_point") == 0) ) then
+			lastsparkfollow = t
+			if sparkfollowtask then
+				sparkfollowtask:Cancel()
+			end
+			sparkfollowtask = inst:DoTaskInTime(1 + math.random() * 1.5, onsecuritysparkfollow)
+		end
+    end)
 
     if TheNet:GetServerGameMode() == "quagmire" then
         event_server_data("quagmire", "components/wisecracker").AddQuagmireEventListeners(inst)

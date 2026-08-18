@@ -580,7 +580,7 @@ local book_defs =
                 while failed_attempts < max_failed_attempts do
                     local spawn_offset = Vector3(math.random(1,3), 0, math.random(1,3))
                     local spawn_point = Vector3(x + math.cos(theta) * FISH_SPAWN_OFFSET, 0, z + math.sin(theta) * FISH_SPAWN_OFFSET)
-                    local num_fish_spawned = schoolspawner:SpawnSchool(spawn_point, nil, spawn_offset)
+                    local num_fish_spawned = schoolspawner:SpawnSchool(spawn_point, reader, spawn_offset)
 
                     if num_fish_spawned == nil or num_fish_spawned == 0 then
                         theta = theta + delta_theta
@@ -717,7 +717,7 @@ local book_defs =
         fn = function(inst, reader)
             local x, y, z = reader.Transform:GetWorldPosition()
             local players = FindPlayersInRange( x, y, z, TUNING.BOOK_TEMPERATURE_RADIUS, true )
-            
+
             for _, player in pairs(players) do
                 player.components.temperature:SetTemperature(TUNING.BOOK_TEMPERATURE_AMOUNT)
                 player.components.moisture:SetMoistureLevel(0)
@@ -730,6 +730,7 @@ local book_defs =
                 for _, item in ipairs(items) do
                     if item.components.inventoryitem ~= nil then
                         item.components.inventoryitem:DryMoisture()
+                        item.components.inventoryitem:SetTemperature(TUNING.BOOK_TEMPERATURE_AMOUNT)
                     end
                 end
             end

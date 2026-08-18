@@ -45,6 +45,11 @@ local prefabs_mutated =
     "moonglass",
 }
 
+local mutated_scrapbook_adddeps =
+{
+	"lunarthrall_plant_gestalt",
+}
+
 local brain = require("brains/wargbrain")
 
 local sounds =
@@ -191,7 +196,7 @@ local function OnAttacked(inst, data)
         function(dude)
             return not (dude.components.health ~= nil and dude.components.health:IsDead())
                 and (dude:HasTag("hound") or dude:HasTag("warg"))
-                and data.attacker ~= (dude.components.follower ~= nil and dude.components.follower.leader or nil)
+                and data.attacker ~= (dude.components.follower ~= nil and dude.components.follower:GetLeader() or nil)
         end, TUNING.WARG_TARGETRANGE)
 end
 
@@ -236,9 +241,7 @@ local function TossItems(inst, x, z, minradius, maxradius)
         local dsq = dx * dx + dz * dz
         local range = GetRandomMinMax(minradius, maxradius) + v:GetPhysicsRadius(.5)
         if dsq < range * range and y1 < .2 then
-            if v.components.mine ~= nil then
-                v.components.mine:Deactivate()
-            end
+            DeactivateInventoryItemBeforeLaunch(v)
             if dsq > 0 then
                 range = range / math.sqrt(dsq)
                 x1 = x + dx * range
@@ -911,6 +914,10 @@ local function MakeWarg(data)
             return inst
         end
 
+		if is_mutated then
+			inst.scrapbook_adddeps = mutated_scrapbook_adddeps
+		end
+
 		inst.override_combat_fx_size = "med"
 
         inst:AddComponent("inspectable")
@@ -936,9 +943,6 @@ local function MakeWarg(data)
 			inst.components.health:SetMaxHealth(TUNING.MUTATED_WARG_HEALTH)
 		else
 			inst.components.health:SetMaxHealth(TUNING.WARG_HEALTH)
-		end
-		if not is_clay and not is_mutated then
-			inst.components.health.nofadeout = true
 		end
 
         inst:AddComponent("sanityaura")
@@ -1034,10 +1038,12 @@ local function MakeWarg(data)
             inst:ListenForEvent("spawnedforhunt", OnSpawnedForHunt_Normal)
         end
 
-        MakeLargeFreezableCharacter(inst)
+		if not is_clay then
+			MakeLargeFreezableCharacter(inst)
+		end
 
 		inst:SetStateGraph("SGwarg")
-		if is_clay and is_gingerbread then
+		if is_clay or is_gingerbread then
 			inst.sg.mem.noelectrocute = true
 		end
         if is_clay or is_mutated then

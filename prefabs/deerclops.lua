@@ -48,6 +48,11 @@ local mutated_prefabs =
     "coolant",
 }
 
+local mutated_scrapbook_adddeps =
+{
+	"lunarthrall_plant_gestalt",
+}
+
 local normal_sounds =
 {
 	step = "dontstarve/creatures/deerclops/step",
@@ -83,7 +88,7 @@ end
 
 local function WantsToLeave(inst)
     return
-        not TheWorld.state.iswinter or
+		not (TUNING.DEERCLOPS_ATTACKS_OFF_SEASON or TheWorld.state.iswinter) or
         (
             not inst.components.combat:HasTarget()
             and inst:IsSated()
@@ -163,7 +168,7 @@ local function OnEntitySleep(inst)
 end
 
 local function OnStopWinter(inst)
-    if inst:IsAsleep() then
+	if not TUNING.DEERCLOPS_ATTACKS_OFF_SEASON and inst:IsAsleep() then
 		if not inst.ignorebase then
 			TheWorld:PushEvent("storehassler", inst)
 		end
@@ -204,13 +209,10 @@ local function OnHitOther(inst, data)
             if other.components.freezable ~= nil then
 				other.components.freezable:AddColdness(inst.sg.statemem.freezepower or inst.freezepower or 2)
             end
-            if other.components.temperature ~= nil then
-                local mintemp = math.max(other.components.temperature.mintemp, 0)
-                local curtemp = other.components.temperature:GetCurrent()
-                if mintemp < curtemp then
-                    other.components.temperature:DoDelta(math.max(-5, mintemp - curtemp))
-                end
-            end
+			local ent_temp = GetEntityTemperature(other)
+			if ent_temp and 0 < ent_temp then
+            	DoDeltaTemperatureToEntity(other, -5)
+			end
         end
         if other.components.freezable ~= nil then
             other.components.freezable:SpawnShatterFX()
@@ -659,6 +661,8 @@ local function mutatedfn()
 
         return inst
     end
+
+	inst.scrapbook_adddeps = mutated_scrapbook_adddeps
 
     inst.sounds = mutated_sounds
 	inst.hasiceaura = true

@@ -29,6 +29,7 @@ local Combat = Class(function(self, inst)
     self.attackrange = 3
     self.hitrange = 3
     self.areahitrange = nil
+	self.hitarc = nil
     self.temprange = nil
 	--self.areahitcheck = nil
     self.areahitdamagepercent = nil
@@ -62,8 +63,8 @@ local Combat = Class(function(self, inst)
 	--self.shouldrecoilfn = nil
 
 	self.externaldamagemultipliers = SourceModifierList(self.inst) -- damage dealt to others multiplier
-
 	self.externaldamagetakenmultipliers = SourceModifierList(self.inst) -- my damage taken multiplier (post armour reduction)
+    -- self.conditionexternaldamagetakenmultipliers = {} -- extra damage taken on certain conditions (post armour reduction)
 
     self.min_attack_period = 4
     self.onhitfn = nil
@@ -89,6 +90,11 @@ local Combat = Class(function(self, inst)
 				self:DropTarget()
 			end
 		else
+			self:DropTarget()
+		end
+	end
+	self.allycheckcallback = function(target)
+		if self:CanBeAlly(target) then
 			self:DropTarget()
 		end
 	end
@@ -142,6 +148,10 @@ end
 function Combat:SetRange(attack, hit)
     self.attackrange = attack
     self.hitrange = (hit or self.attackrange)
+end
+
+function Combat:SetHitArc(arc)
+	self.hitarc = arc
 end
 
 function Combat:SetPlayerStunlock(stunlock)
@@ -344,10 +354,12 @@ function Combat:StartTrackingTarget(target)
         self.inst:ListenForEvent("enterlimbo", self.losetargetcallback, target)
         self.inst:ListenForEvent("onremove", self.losetargetcallback, target)
 		self.inst:ListenForEvent("transfercombattarget", self.transfertargetcallback, target)
+		self.inst:ListenForEvent("leaderchanged", self.allycheckcallback, target)
     end
 end
 
 function Combat:StopTrackingTarget(target)
+	self.inst:RemoveEventCallback("leaderchanged", self.allycheckcallback, target)
 	self.inst:RemoveEventCallback("transfercombattarget", self.transfertargetcallback, target)
     self.inst:RemoveEventCallback("enterlimbo", self.losetargetcallback, target)
     self.inst:RemoveEventCallback("onremove", self.losetargetcallback, target)
@@ -367,17 +379,22 @@ function Combat:DropTarget(hasnexttarget)
     end
 end
 
-function Combat:EngageTarget(target)
+--V2C: [oldtarget] and [hasnexttarget](above) are really internal use flags.
+--     [oldtarget] is NOT an override, hence not "oldtarget or self.target".
+--     We really should assert that they don't mismatch, but no need because [oldtarget]
+--     was added very late, and should not be passed in externally (now or in the past).
+function Combat:EngageTarget(target, oldtarget)
     if target then
-        local oldtarget = self.target
+		oldtarget = self.target or oldtarget
         self.target = target
         self.inst:PushEvent("newcombattarget", {target=target, oldtarget=oldtarget})
         self:StartTrackingTarget(target)
         if self.keeptargetfn then
             self.inst:StartUpdatingComponent(self)
         end
-        if self.inst.components.follower and self.inst.components.follower.leader == target and self.inst.components.follower.leader.components.leader and not self.inst.components.follower.keepleaderonattacked then
-            self.inst.components.follower.leader.components.leader:RemoveFollower(self.inst)
+        local leader = self.inst.components.follower and self.inst.components.follower:GetLeader()
+        if leader and leader == target and leader.components.leader and not self.inst.components.follower.keepleaderonattacked then
+            leader.components.leader:RemoveFollower(self.inst)
         end
     end
 end
@@ -456,8 +473,9 @@ function Combat:SetTarget(target)
         (target == nil or (self:IsValidTarget(target) and self:ShouldAggro(target))) and
 		not (target and target.isplayer and target.sg and target.sg:HasStateTag("hiding"))
 	then
+		local oldtarget = self.target
         self:DropTarget(target ~= nil)
-        self:EngageTarget(target)
+		self:EngageTarget(target, oldtarget)
     end
 end
 
@@ -597,7 +615,6 @@ function Combat:GetAttacked(attacker, damage, weapon, stimuli, spdamage)
 			end
 			damage, spdamage = self.inst.components.inventory:ApplyDamage(damage, attacker, weapon, spdamage)
         end
-		local damagetypemult = 1
 		if self.inst.components.rideable ~= nil then
 			local saddle = self.inst.components.rideable.saddle
 			if saddle ~= nil then
@@ -606,9 +623,13 @@ function Combat:GetAttacked(attacker, damage, weapon, stimuli, spdamage)
                 end
 			end
 		end
+        local damagetypemult = 1
 		if self.inst.components.damagetyperesist ~= nil then
 			damagetypemult = damagetypemult * self.inst.components.damagetyperesist:GetResist(attacker, weapon)
 		end
+        if self.conditionexternaldamagetakenmultipliers ~= nil then
+            damage = damagetypemult * self:ApplyConditionExternalDamageTakenMultiplier(damage, attacker, weapon)
+        end
 		damage = damage * damagetypemult * self.externaldamagetakenmultipliers:Get()
 		if (damage > 0 or spdamage ~= nil) and not self.inst.components.health:IsInvincible() then
 			if damage > 0 then
@@ -718,12 +739,10 @@ function Combat:StartAttack()
     if self.forcefacing and self.target ~= nil and self.target:IsValid() then
         self.inst:ForceFacePoint(self.target:GetPosition())
     end
-    self.laststartattacktime = GetTime()
+	self:RestartCooldown()
 end
 
-function Combat:CancelAttack()
-    self.laststartattacktime = nil
-end
+Combat.CancelAttack = Combat.ResetCooldown
 
 function Combat:CanTarget(target)
     return self.inst.replica.combat:CanTarget(target)
@@ -1011,6 +1030,7 @@ function Combat:CanLightTarget(target, weapon)
         --V2C: fueled or fueltype should not really matter. if we can burn it, should still allow lighting.
 end
 
+--@V2C: WARNING!  This doesn't match combat replica's version.  Why is this needed on clients anyway?
 function Combat:CanHitTarget(target, weapon)
     if self.inst ~= nil and
         self.inst:IsValid() and
@@ -1024,16 +1044,45 @@ function Combat:CanHitTarget(target, weapon)
             )
         ) then
 
-        local targetpos = target:GetPosition()
-        -- V2C: this is 3D distsq
-        local pos = self.temppos or self.inst:GetPosition()
-        if self.ignorehitrange or distsq(targetpos, pos) <= self:CalcHitRangeSq(target) then
-            return true
-        elseif weapon ~= nil and weapon.components.projectile ~= nil then
+		if self.ignorehitrange then
+			return true
+		end
+
+		local x1, y1, z1 = target.Transform:GetWorldPosition()
+		local x, y, z
+		if self.temppos then
+			x, y, z = self.temppos:Get()
+		else
+			x, y, z = self.inst.Transform:GetWorldPosition()
+		end
+
+		local dx = x1 - x
+		local dy = y1 - y
+		local dz = z1 - z
+		local dsq3d = dx * dx + dy * dy + dz * dz
+
+		if dsq3d <= self:CalcHitRangeSq(target) then
+			if self.hitarc == nil or (dx == 0 and dz == 0) then
+				return true
+			end
+			local rot = self.inst.Transform:GetRotation()
+			local rot1 = math.atan2(-dz, dx) * RADIANS
+			if DiffAngle(rot, rot1) * 2 <= self.hitarc then
+				return true
+			end
+		end
+
+		--OOR, but check projectile as well
+		if weapon and weapon.components.projectile then
+			x, y, z = weapon.Transform:GetWorldPosition()
+			dx = x1 - x
+			dy = y1 - y
+			dz = z1 - z
+			dsq3d = dx * dx + dy * dy + dz * dz
+
             local range = target:GetPhysicsRadius(0) + weapon.components.projectile.hitdist
-            -- V2C: this is 3D distsq
-            return distsq(targetpos, weapon:GetPosition()) <= range * range
-        end
+			return dsq3d <= range * range
+		end
     end
     return false
 end
@@ -1196,6 +1245,28 @@ function Combat:ShouldRecoil(attacker, weapon, damage)
 	return false, damage
 end
 
+function Combat:AddConditionExternalDamageTakenMultiplier(fn)
+    self.conditionexternaldamagetakenmultipliers = self.conditionexternaldamagetakenmultipliers or {}
+    self:RemoveConditionExternalDamageTakenMultiplier(fn)
+    table.insert(self.conditionexternaldamagetakenmultipliers, fn)
+end
+
+function Combat:RemoveConditionExternalDamageTakenMultiplier(fn)
+    if self.conditionexternaldamagetakenmultipliers ~= nil then
+        table.removearrayvalue(self.conditionexternaldamagetakenmultipliers, fn)
+    end
+end
+
+function Combat:ApplyConditionExternalDamageTakenMultiplier(damage, attacker, weapon)
+    local damagetakenmult = 1
+
+    for k, fn in ipairs(self.conditionexternaldamagetakenmultipliers) do
+        damagetakenmult = damagetakenmult * (fn(self.inst, attacker, weapon) or 1)
+    end
+
+    return damage * damagetakenmult
+end
+
 --#V2C: what's this? not used?
 function Combat:GetDamageReflect(target, damage, weapon, stimuli)
     if target.components.rider ~= nil and target.components.rider:IsRiding() then
@@ -1243,10 +1314,15 @@ function Combat:DoAreaAttack(target, range, weapon, validfn, stimuli, excludetag
     return hitcount
 end
 
+function Combat:CanBeAlly(guy)
+	return self.inst.replica.combat:CanBeAlly(guy)
+end
+
 function Combat:IsAlly(guy)
     return self.inst.replica.combat:IsAlly(guy)
 end
 
+--V2C: *deprecated* use similar functions IsAlly/CanBeAlly instead
 function Combat:TargetHasFriendlyLeader(target)
     return self.inst.replica.combat:TargetHasFriendlyLeader(target)
 end

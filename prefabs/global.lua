@@ -89,6 +89,7 @@ local assets =
 
     Asset("SOUNDPACKAGE", "sound/WX_rework.fev"),
     Asset("FILE", "sound/WX_rework.fsb"),
+    Asset("FILE", "sound/WX_rework_music.fsb"),
 
     Asset("SOUNDPACKAGE", "sound/monkeyisland.fev"),
     Asset("FILE", "sound/monkeyisland.fsb"),
@@ -170,6 +171,12 @@ local assets =
 
     Asset("SOUNDPACKAGE", "sound/winter2025.fev"),
     Asset("FILE", "sound/winter2025.fsb"),
+
+    Asset("SOUNDPACKAGE", "sound/yoth_2026.fev"),
+    Asset("FILE", "sound/yoth_2026.fsb"),
+
+    Asset("SOUNDPACKAGE", "sound/rifts7.fev"),
+    Asset("FILE", "sound/rifts7.fsb"),
 
     Asset("FILE", "sound/wilton.fsb"),         -- Legacy sound that can be used in mods
     Asset("FILE", "sound/winnie.fsb"),         -- Legacy sound that can be used in mods
@@ -487,6 +494,9 @@ local assets =
 
     Asset("ATLAS", "images/skilltree5.xml"),
     Asset("IMAGE", "images/skilltree5.tex"),
+
+    Asset("ATLAS", "images/skilltree6.xml"),
+    Asset("IMAGE", "images/skilltree6.tex"),
 
     Asset("ATLAS", "images/skilltree_icons.xml"),
     Asset("IMAGE", "images/skilltree_icons.tex"),    

@@ -720,18 +720,15 @@ end
 
 -------------------------MEMREPORT
 
-
+local function weighted_total(choices)
+    local total = 0
+    for choice, weight in pairs(choices) do
+        total = total + weight
+    end
+    return total
+end
 
 function weighted_random_choice(choices)
-
-    local function weighted_total(choices)
-        local total = 0
-        for choice, weight in pairs(choices) do
-            total = total + weight
-        end
-        return total
-    end
-
     local threshold = math.random() * weighted_total(choices)
 
     local last_choice
@@ -745,15 +742,6 @@ function weighted_random_choice(choices)
 end
 
 function weighted_random_choices(choices, num_choices)
-
-    local function weighted_total(choices)
-        local total = 0
-        for choice, weight in pairs(choices) do
-            total = total + weight
-        end
-        return total
-    end
-
 	local picks = {}
 	for i = 1, num_choices do
 	    local pick
@@ -2006,38 +1994,6 @@ function PRNG_Uniform:RandInt(min, max)
 	end
     local rand = self:Rand()
 	return math.min(max, min + math.floor(rand * (max - min + 1)))
-end
-------------------------------
--- Checks for if teleportations should be blocked for any inst going from points A to B.
-
-function IsTeleportingPermittedFromPointToPoint(fx, fy, fz, tx, ty, tz)
-    local map = TheWorld.Map
-
-    if map:IsWagPunkArenaBarrierUp() then
-        if map:IsPointInWagPunkArena(fx, fy, fz) ~= map:IsPointInWagPunkArena(tx, ty, tz) then
-            return false
-        end
-    end
-
-    if map:IsPointInAnyVault(tx, ty, tz) then
-        return false
-    end
-
-    return true
-end
-
-function IsTeleportLinkingPermittedFromPoint(fx, fy, fz)
-    local map = TheWorld.Map
-
-    if map:IsPointInWagPunkArenaAndBarrierIsUp(fx, fy, fz) then
-        return false
-    end
-
-    if map:IsPointInAnyVault(fx, fy, fz) then
-        return false
-    end
-
-    return true
 end
 
 ------------------------------

@@ -93,6 +93,7 @@ local Controls = Class(Widget, function(self, owner)
 
 	self.containerroot_under = self:AddChild(Widget(""))
     self.containerroot = self:AddChild(Widget(""))
+	self.containerroot_over = self:AddChild(Widget(""))
     self.containerroot_side_behind = self:AddChild(Widget(""))
     self:MakeScalingNodes()
 
@@ -269,6 +270,12 @@ local Controls = Class(Widget, function(self, owner)
 	self.containerroot_under:SetMaxPropUpscale(MAX_HUD_SCALE)
 	self.containerroot_under = self.containerroot_under:AddChild(Widget("containerroot_under"))
 
+	self.containerroot_over:SetHAnchor(ANCHOR_MIDDLE)
+	self.containerroot_over:SetVAnchor(ANCHOR_MIDDLE)
+	self.containerroot_over:SetScaleMode(SCALEMODE_PROPORTIONAL)
+	self.containerroot_over:SetMaxPropUpscale(MAX_HUD_SCALE)
+	self.containerroot_over = self.containerroot_over:AddChild(Widget("containerroot_over"))
+
     self.containerroot_side_behind:SetHAnchor(ANCHOR_RIGHT)
     self.containerroot_side_behind:SetVAnchor(ANCHOR_MIDDLE)
     self.containerroot_side_behind:SetScaleMode(SCALEMODE_PROPORTIONAL)
@@ -284,22 +291,13 @@ local Controls = Class(Widget, function(self, owner)
     self.containerroot_side:Hide()
 
 
-
-    if not is_splitscreen then
-        -- This assumes that splitscreen means console; consoles are forced to use
-        -- the integrated backpack, so the side widget shouldn't cause issues there.
-        if owner:HasTag("upgrademoduleowner") then
-            --self.containerroot_side:SetPosition(-120, 0, 0)
-        end
-    end
-
     self.mousefollow = self:AddChild(Widget("follower"))
     self.mousefollow:FollowMouse(true)
     self.mousefollow:SetScaleMode(SCALEMODE_PROPORTIONAL)
 
     self.hover = self:AddChild(HoverText(self.owner))
     self.hover:SetScaleMode(SCALEMODE_PROPORTIONAL)
-	
+
 	if is_player1 then
 	    self.craftingmenu = self.left_root:AddChild(CraftingMenu(self.owner, true))
 	else
@@ -565,6 +563,7 @@ function Controls:SetHUDSize()
     self.bottomright_root:SetScale(scale)
     self.containerroot:SetScale(scale)
 	self.containerroot_under:SetScale(scale)
+	self.containerroot_over:SetScale(scale)
     self.containerroot_side:SetScale(scale)
     self.containerroot_side_behind:SetScale(scale)
 
@@ -615,6 +614,9 @@ function Controls:OnUpdate(dt)
 
     if controller_mode then
         self.mapcontrols:Hide()
+		if self.mapcontrols.focus then
+			self.mapcontrols:ClearFocus()
+		end
     else
         self.mapcontrols:Show()
     end
@@ -719,7 +721,8 @@ function Controls:OnUpdate(dt)
         if controller_target ~= nil then
             local cmds, cmdsoffset
             local textblock = self.playeractionhint.text
-            if self.groundactionhint.shown and distsq(self.owner:GetPosition(), controller_target:GetPosition()) < 1.33 then
+            local keepgroundactionhint = ground_l and ground_l.action.keepgroundactionhint or ground_r and ground_r.action.keepgroundactionhint
+            if self.groundactionhint.shown and not keepgroundactionhint and distsq(self.owner:GetPosition(), controller_target:GetPosition()) < 1.33 then
                 --You're close to your target so we should combine the two text blocks.
                 cmds = ground_cmds
                 cmdsoffset = #cmds
@@ -785,7 +788,8 @@ function Controls:OnUpdate(dt)
                 -- target is highlighted but with no actions
                 -- -> suppress any ground action hints
                 -- -> use target's custom display name to show special action hint
-                if cmds ~= ground_cmds then
+                -- But keep it around if the action really wants it anyway.
+                if cmds ~= ground_cmds and not keepgroundactionhint then
                     self.groundactionhint:Hide()
                     self.groundactionhint:SetTarget(nil)
                 end
@@ -851,6 +855,19 @@ function Controls:OnUpdate(dt)
     --default offsets
     self.playeractionhint:SetScreenOffset(0,0)
     self.attackhint:SetScreenOffset(0,0)
+
+    -- Move tool tip to be behind player so it doesnt obstruct the reticule.
+    if self.owner.replica.inventory then
+        local handitem = self.owner.replica.inventory:GetEquippedItem(EQUIPSLOTS.HANDS)
+        local golfclub_reticule = handitem and handitem.components.golfclub_reticule
+        if self.playeractionhint.shown and golfclub_reticule and golfclub_reticule:GetTarget() then
+            local psx, psy = TheSim:GetScreenPos(self.owner.Transform:GetWorldPosition())
+            local sx, sy = TheSim:GetScreenPos(golfclub_reticule:GetTarget().Transform:GetWorldPosition())
+            local theta = math.atan2(sy - psy, psx - sx)
+            local w, h = self.playeractionhint.text:GetRegionSize()
+            self.playeractionhint:SetScreenOffset(math.cos(theta) * w, 100 - math.sin(theta) * h)
+        end
+    end
 
     --if we are showing both hints, make sure they don't overlap
     if self.attackhint.shown and self.playeractionhint.shown then
@@ -1138,6 +1155,18 @@ function Controls:BuildCommandWheel(is_splitscreen)
 	else
         self.commandwheel:SetScale(TheFrontEnd:GetHUDScale() * consoleScale)
 	end
+end
+
+function Controls:GetTooltipPos(hoverer)
+    return FunctionOrValue(self.override_tooltip_pos, self, hoverer)
+end
+
+function Controls:OverrideTooltipPos(pos_or_pos_x, pos_y, pos_z)
+    if type(pos_or_pos_x) == "number" then
+        self.override_tooltip_pos = Vector3(pos_or_pos_x, pos_y, pos_z)
+    else
+        self.override_tooltip_pos = pos_or_pos_x
+    end
 end
 
 return Controls

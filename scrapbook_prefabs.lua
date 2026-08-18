@@ -1970,7 +1970,9 @@ local PREFABS =
     ["vault_statue"] = true,
     ["vault_torch"] = true,
     ["ancient_husk"] = true, -- Skeleton remains.
-    ["vaultrelic_vase"] = true,
+	--["vaultrelic_bowl"] = true,
+	--["vaultrelic_vase"] = true,
+	--["vaultrelic_planter"] = true,
 
     ["abysspillar_minion"] = true,
     ["abysspillar_trial"] = true,
@@ -2028,6 +2030,63 @@ local PREFABS =
     ["hermithouse_laundry_socks"] = true,
     ["hermithouse_laundry_shorts"] = true,
     ["hermit_chair_rocking"] = true,
+
+    -- [[ Meta 6 ]]
+
+    ["wx78_drone_scout"] = true,
+    ["wx78_drone_delivery"] = true,
+    ["wx78_drone_delivery_small"] = true,
+    ["wx78_drone_zap"] = true,
+    ["wx78_drone_zap_remote"] = true,
+
+    ["wx78module_radar"] = true,
+    ["wx78module_stacksize"] = true,
+    ["wx78module_light2"] = true,
+    ["wx78module_digestion"] = true,
+    ["wx78module_screech"] = true,
+    ["wx78module_spin"] = true,
+    ["wx78module_shielding"] = true,
+	["wx78module_chess"] = true,
+
+    ["wx78_backupbody_inventory"] = true,
+
+    ["wx78_foodbrick"] = true,
+    ["wx78_gestalttrapper"] = true,
+
+    ["wx78_shadowdrone_debuffer"] = true,
+    ["wx78_shadowdrone_harvester"] = true,
+
+    -- [[ Rifts 7 ]]
+
+    ["mitegland"] = true,
+    ["mitegland_cooked"] = true,
+
+    ["fumaroleaxe"] = true,
+    ["fumarolepickaxe"] = true,
+    ["fumaroleshovel"] = true,
+    ["fumarolehammer"] = true,
+    ["fumarole_farm_hoe"] = true,
+
+    ["trap_fumarole"] = true,
+
+    ["vault_key"] = true,
+    ["vault_decon_door"] = true,
+    ["vault_decon_mister"] = true,
+    ["vault_crawler"] = true,
+    ["vault_crawler_socket"] = true,
+    ["vault_pillar_guard"] = true,
+    ["vault_key_activator"] = true,
+    ["vault_crawler_lever"] = true,
+    ["vault_compass"] = true,
+    ["vault_key_pedestal"] = true,
+    ["vault_refiner_pedestal"] = true,
+    ["vault_orb_refined"] = true,
+    ["vault_pillar_guard_piece_1"] = true,
+    ["vault_pillar_guard_piece_2"] = true,
+    ["vault_pillar_guard_piece_3"] = true,
+
+    ["healingsalve_fumarole"] = true,
+    ["chesspiece_vault_pillar_guard"] = true,
 
     -----------------------------------------------
 

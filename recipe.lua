@@ -101,8 +101,9 @@ Recipe = Class(function(self, name, ingredients, tab, level, placer_or_more_data
     self.nameoverride  = more_data.nameoverride -- Override the name string in the crafting menu.
 	self.description   = more_data.description -- override the description string in the crafting menu
 
-    self.imagefn       = type(image) == "function" and image or nil
-    self.image         = self.imagefn == nil and image or (self.product .. ".tex")
+	self.layeredimagefn = more_data.layeredimagefn
+	self.imagefn = type(image) == "function" and image or nil
+	self.image = self.imagefn == nil and image or (self.product..".tex")
     self.atlas         = (atlas and resolvefilepath(atlas))-- or resolvefilepath(GetInventoryItemAtlas(self.image))
 	self.fxover        = more_data.fxover
 
@@ -117,9 +118,17 @@ Recipe = Class(function(self, name, ingredients, tab, level, placer_or_more_data
 
     
     self.testfn        = testfn					-- custom placer test function if default test isn't enough
+    self.overridecandeployrecipeatpointfn = more_data.overridecandeployrecipeatpointfn -- For overriding CanDeployRecipeAtPoint's default IsDeployPointClear handling.
 	self.canbuild      = more_data.canbuild		-- custom test function to see if we should be allowed to craft this recipe, return a build action fail message if false
 
-    self.nounlock      = nounlock or false
+    if more_data.unlocks_from_skin then -- Boolean flag to enum value based on recipe context.
+        if level == TECH.LOST then
+            self.unlocks_from_skin = SKINUNLOCKS.ALWAYS
+        else
+            self.unlocks_from_skin = SKINUNLOCKS.CRAFTINGSTATION
+        end
+    end
+    self.nounlock      = self.unlocks_from_skin or nounlock or false
 
     self.numtogive     = numtogive or 1
 	self.override_numtogive_fn = more_data.override_numtogive_fn
@@ -142,6 +151,7 @@ Recipe = Class(function(self, name, ingredients, tab, level, placer_or_more_data
 	self.dropitem      = more_data.dropitem
 
 	self.actionstr     = more_data.actionstr
+    self.recipedisplaynamefn = more_data.recipedisplaynamefn
 	self.hint_msg      = more_data.hint_msg
 	self.force_hint    = more_data.force_hint -- show locked recipe (i.e. missing +1 tech level) even if we are "nounlock"
 
@@ -152,6 +162,12 @@ Recipe = Class(function(self, name, ingredients, tab, level, placer_or_more_data
     if self.limitedamount then
         if TheSim then -- updateprefabs guard
             DeclareLimitedCraftingRecipe(self.name)
+        end
+    end
+    self.getlimitedrecipecount = more_data.getlimitedrecipecount -- NOTES(JBK): Only use this for recipes the client and server both know the limit to outside of crafting stations.
+    if self.getlimitedrecipecount then
+        if TheSim then -- updateprefabs guard
+            table.insert(EXTERNALLY_HANDLED_LIMITED_RECIPES, self.name)
         end
     end
 

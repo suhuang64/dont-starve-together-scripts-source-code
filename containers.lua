@@ -12,7 +12,7 @@ function containers.widgetsetup(container, prefab, data)
         for k, v in pairs(t) do
             container[k] = v
         end
-        container:SetNumSlots(container.widget.slotpos ~= nil and #container.widget.slotpos or 0)
+		container:SetNumSlots(container.widget.numslots or (container.widget.slotpos and #container.widget.slotpos or 0))
     end
 end
 
@@ -472,7 +472,7 @@ params.bundle_container =
 }
 
 function params.bundle_container.itemtestfn(container, item, slot)
-    return not (item:HasTag("irreplaceable") or item:HasTag("_container") or item:HasTag("bundle") or item:HasTag("nobundling"))
+    return not item:HasAnyTag("irreplaceable", "_container", "bundle", "nobundling")
 end
 
 function params.bundle_container.widget.buttoninfo.fn(inst, doer)
@@ -668,7 +668,7 @@ params.mushroom_light =
 }
 
 function params.mushroom_light.itemtestfn(container, item, slot)
-    return (item:HasTag("lightbattery") or item:HasTag("lightcontainer")) and not container.inst:HasTag("burnt")
+    return item:HasAnyTag("lightbattery", "lightcontainer") and not container.inst:HasTag("burnt")
 end
 
 --------------------------------------------------------------------------
@@ -678,7 +678,7 @@ end
 params.mushroom_light2 = deepcopy(params.mushroom_light)
 
 function params.mushroom_light2.itemtestfn(container, item, slot)
-    return (item:HasTag("lightbattery") or item:HasTag("spore") or item:HasTag("lightcontainer")) and not container.inst:HasTag("burnt")
+    return item:HasAnyTag("lightbattery", "spore", "lightcontainer") and not container.inst:HasTag("burnt")
 end
 
 --------------------------------------------------------------------------
@@ -689,10 +689,7 @@ local LIGHT_TAGS = { "lightbattery", "spore", "lightcontainer" }
 params.yots_lantern_post = {
     widget =
     {
-        slotpos =
-        {
-             Vector3(-2, 18, 0),
-        },
+        slotpos = { Vector3(0, 0, 0), },
         animbank = "ui_chest_1x1",
         animbuild = "ui_chest_1x1",
         pos = Vector3(0, 160, 0),
@@ -1020,12 +1017,12 @@ for y = 2, 0, -1 do
 end
 
 function params.icebox.itemtestfn(container, item, slot)
-    if item:HasTag("icebox_valid") then
+    if item:HasAnyTag("icebox_valid", "inventoryitemtemperature") then
         return true
     end
 
     --Perishable
-    if not (item:HasTag("fresh") or item:HasTag("stale") or item:HasTag("spoiled")) then
+    if not item:HasAnyTag("fresh", "stale", "spoiled") then
         return false
     end
 
@@ -1050,10 +1047,9 @@ end
 params.saltbox = deepcopy(params.icebox)
 
 function params.saltbox.itemtestfn(container, item, slot)
-	return ((item:HasTag("fresh") or item:HasTag("stale") or item:HasTag("spoiled"))
+    return (item:HasAnyTag("fresh", "stale", "spoiled")
 		and item:HasTag("cookable")
-		and not item:HasTag("deployable")
-		and not item:HasTag("smallcreature")
+		and not item:HasAnyTag("deployable", "smallcreature")
 		and item.replica.health == nil)
 		or item:HasTag("saltbox_valid")
 end
@@ -1344,7 +1340,7 @@ params.oceanfishingrod =
 }
 
 function params.oceanfishingrod.itemtestfn(container, item, slot)
-	return (slot == nil and (item:HasTag("oceanfishing_bobber") or item:HasTag("oceanfishing_lure")))
+	return (slot == nil and item:HasAnyTag("oceanfishing_bobber", "oceanfishing_lure"))
 		or (slot == 1 and item:HasTag("oceanfishing_bobber"))
 		or (slot == 2 and item:HasTag("oceanfishing_lure"))
 end
@@ -1630,9 +1626,10 @@ for y = 1, 0, -1 do
 end
 
 function params.tacklecontainer.itemtestfn(container, item, slot)
-	return item:HasTag("oceanfishing_bobber") or item:HasTag("oceanfishing_lure")
+	return item:HasAnyTag("oceanfishing_bobber", "oceanfishing_lure")
 end
 
+params.tacklecontainer.priorityfn = params.tacklecontainer.itemtestfn
 
 --------------------------------------------------------------------------
 --[[ supertacklecontainer ]]
@@ -1658,6 +1655,7 @@ for y = 1, -3, -1 do
 end
 
 params.supertacklecontainer.itemtestfn = params.tacklecontainer.itemtestfn
+params.supertacklecontainer.priorityfn = params.tacklecontainer.priorityfn
 
 --------------------------------------------------------------------------
 --[[ sunkenchest ]]
@@ -1760,7 +1758,7 @@ for y = 0, 6 do
 end
 
 function params.candybag.itemtestfn(container, item, slot)
-    return item:HasTag("halloweencandy") or item:HasTag("halloween_ornament") or string.sub(item.prefab, 1, 8) == "trinket_"
+    return item:HasAnyTag("halloweencandy", "halloween_ornament") or string.sub(item.prefab, 1, 8) == "trinket_"
 end
 
 params.candybag.priorityfn = params.candybag.itemtestfn
@@ -1804,14 +1802,14 @@ params.alterguardianhat =
         slotbg = {},
         animbank = "ui_alterguardianhat_1x6",
         animbuild = "ui_alterguardianhat_1x6",
-        pos = Vector3(106, 150, 0),
+		pos = Vector3(106, 10, 0),
     },
     acceptsstacks = false,
     type = "hand_inv",
     excludefromcrafting = true,
 }
 
-local AGHAT_SLOTSTART = 95
+local AGHAT_SLOTSTART = 72 * 5 - 22
 local AGHAT_SLOTDIFF = 72
 local SLOT_BG = { image = "spore_slot.tex", atlas = "images/hud2.xml" }
 for i = 0, 4 do
@@ -1878,7 +1876,7 @@ params.ocean_trawler =
 }
 
 function params.ocean_trawler.itemtestfn(container, item, slot)
-    return item:HasTag("cookable") or item:HasTag("oceanfish")
+    return item:HasAnyTag("cookable", "oceanfish")
 end
 
 --------------------------------------------------------------------------
@@ -1936,7 +1934,7 @@ end
 
 function params.beargerfur_sack.itemtestfn(container, item, slot)
     -- Prepared food.
-    return item:HasTag("beargerfur_sack_valid") or item:HasTag("preparedfood")
+    return item:HasAnyTag("beargerfur_sack_valid", "preparedfood")
 end
 
 --------------------------------------------------------------------------
@@ -1983,6 +1981,8 @@ function params.battlesong_container.itemtestfn(container, item, slot)
     -- Battlesongs.
     return item:HasTag("battlesong")
 end
+
+params.battlesong_container.priorityfn = params.battlesong_container.itemtestfn
 
 --------------------------------------------------------------------------
 --[[ wortox_souljar ]]
@@ -2040,8 +2040,10 @@ for y = 2, 0, -1 do
 end
 
 function params.elixir_container.itemtestfn(container, item, slot)
-    return item:HasTag("ghostlyelixir") or item:HasTag("ghostflower")
+	return item:HasAnyTag("ghostlyelixir", "ghostflower")
 end
+
+params.elixir_container.priorityfn = params.elixir_container.itemtestfn
 
 --------------------------------------------------------------------------
 --[[ dragonflyfurnace ]]
@@ -2123,6 +2125,221 @@ end
 
 function params.slingshotammo_container.itemtestfn(container, item, slot)
     return item:HasTag("slingshotammo")
+end
+
+params.slingshotammo_container.priorityfn = params.slingshotammo_container.itemtestfn
+
+--------------------------------------------------------------------------
+--[[ wx78_backupbody ]]
+--------------------------------------------------------------------------
+
+local WX78_BACKUPBODY_POS = Vector3(0, 280, 0)
+
+params.wx78_backupbody = {
+    widget = {
+        slotpos = {},
+        animbank = "ui_wx78_backupbody_5x3",
+        animbuild = "ui_wx78_backupbody_5x3",
+		pos = WX78_BACKUPBODY_POS,
+        side_align_tip = 160,
+        opensound = "WX_rework/module_side/open",
+        closesound = "WX_rework/module_side/close",
+    },
+    type = "chest",
+}
+
+function params.wx78_backupbody.itemtestfn(container, item, slot)
+    return not item:HasTag("irreplaceable")
+end
+
+for y = 2, 0, -1 do
+    for x = 0, 4, 1 do
+        table.insert(params.wx78_backupbody.widget.slotpos, Vector3(80 * x - 80 * 2, 80 * y - 80 * 2 - 42.5, 0))
+    end
+end
+
+--------------------------------------------------------------------------
+--[[ wx78_drone_delivery ]]
+--------------------------------------------------------------------------
+
+params.wx78_drone_delivery =
+{
+	widget =
+	{
+		slotpos = {},
+		animbank = "ui_wx_deliverydrone_3x2",
+		animbuild = "ui_wx_deliverydrone_3x2",
+		pos = Vector3(0, 200, 0),
+		side_align_tip = 160,
+	},
+	type = "chest",
+}
+
+for y = 1, 0, -1 do
+	for x = 0, 2 do
+		table.insert(params.wx78_drone_delivery.widget.slotpos, Vector3(80 * x - 80 * 2 + 80, 80 * y - 80 * 2 + 120, 0))
+	end
+end
+
+params.wx78_drone_delivery_small =
+{
+	widget =
+	{
+		slotpos = {},
+		animbank = "ui_wx_deliverydrone_3x1",
+		animbuild = "ui_wx_deliverydrone_3x1",
+		pos = Vector3(0, 200, 0),
+		side_align_tip = 160,
+	},
+	type = "chest",
+}
+
+for x = 0, 2 do
+	table.insert(params.wx78_drone_delivery_small.widget.slotpos, Vector3(75 * x - 75 * 2 + 75, 0, 0))
+end
+
+--------------------------------------------------------------------------
+--[[ wx78_inventorycontainer ]]
+--------------------------------------------------------------------------
+
+local WX78_INVENTORY_CONTAINER_OFFSET = Vector3(0, 100, 0)
+
+local WX78_INVENTORY_CONTAINER_SLOTPOS = {}
+for x = 0, 4, 1 do
+	table.insert(WX78_INVENTORY_CONTAINER_SLOTPOS, { Vector3(80 * x - 80 * 2, -340, 0) })
+end
+
+local function wx78_inventorycontainer_isinbackupbody(container, doer)
+	local inventoryitem = container.replica.inventoryitem
+	return not (inventoryitem and inventoryitem:IsHeldBy(doer))
+end
+
+local function wx78_inventorycontainer_getcolumn(container)
+	local parent = container.entity:GetParent()
+	local _container = parent and parent.replica.container
+	if _container then
+		for slot, v in pairs(_container:GetItems()) do
+			if v == container then
+				return ((slot - 1) % 5) + 1
+			end
+		end
+	end
+	return 5
+end
+
+params.wx78_inventorycontainer =
+{
+    widget =
+    {
+		slotpos = { Vector3(0, 0, 0) },
+		slotposfn = function(container, doer)
+			return wx78_inventorycontainer_isinbackupbody(container, doer)
+				and WX78_INVENTORY_CONTAINER_SLOTPOS[wx78_inventorycontainer_getcolumn(container)]
+				or nil
+		end,
+		--numslots = 1, --required if we don't have slotpos table
+		slotscalefn = function(container, doer)
+			return wx78_inventorycontainer_isinbackupbody(container, doer) and 0.85 or nil
+		end,
+		slothighlightscalefn = function(container, doer)
+			return wx78_inventorycontainer_isinbackupbody(container, doer) and 1.08 or nil
+		end,
+        animbank = "ui_wx78_inventorycontainer_1x1",
+        animbuild = "ui_wx78_inventorycontainer_1x1",
+		animfn = function(container, doer, anim)
+			return wx78_inventorycontainer_isinbackupbody(container, doer)
+				and (anim..tostring(wx78_inventorycontainer_getcolumn(container)))
+				or nil
+		end,
+		--
+		pos = WX78_INVENTORY_CONTAINER_OFFSET,
+		posfn = function(container, doer)
+			if wx78_inventorycontainer_isinbackupbody(container, doer) then
+				return WX78_BACKUPBODY_POS
+			end
+
+			-- TODO is this the best way of doing this?
+			for k, v in pairs(doer.HUD.controls.inv.inv) do
+				if v.tile and v.tile.item == container then
+					return v:GetPosition() + WX78_INVENTORY_CONTAINER_OFFSET
+				end
+			end
+		end,
+		--Override the widget sound, which is heard only by the client
+		opensound = "balatro/balatro_cabinet/cards_flip_HUD",
+		closesound = "balatro/balatro_cabinet/cards_flip_HUD",
+		--
+		bottom_align_tip_fn = function(container, doer)
+			return wx78_inventorycontainer_isinbackupbody(container, doer) and -90 or nil
+		end,
+		top_align_tip_fn = function(container, doer)
+			return not wx78_inventorycontainer_isinbackupbody(container, doer) and 70 or nil
+		end,
+		top_align_tip = 70, --backward compatibility, fn versions would have higher priority now
+    },
+	type = "inv",
+	typefn = function(container, doer)
+		return wx78_inventorycontainer_isinbackupbody(container, doer) and "chest_addon" or nil
+	end,
+    -- excludefromcrafting = true,
+}
+
+function params.wx78_inventorycontainer.priorityfn(container, item)
+	local existingitem = container:GetItemInSlot(1)
+	local stackable = existingitem and existingitem.replica.stackable
+	return stackable ~= nil and stackable:CanStackWith(item)
+end
+
+--------------------------------------------------------------------------
+--[[ socket_keystone_construction_container ]]
+--------------------------------------------------------------------------
+
+params.socket_keystone_construction_container = deepcopy(params.construction_container)
+
+params.socket_keystone_construction_container.widget.slotpos = {Vector3(0, 8, 0)}
+params.socket_keystone_construction_container.widget.side_align_tip = 120
+params.socket_keystone_construction_container.widget.animbank = "ui_construction_1x1"
+params.socket_keystone_construction_container.widget.animbuild = "ui_construction_1x1"
+params.socket_keystone_construction_container.widget.buttoninfo.text = STRINGS.ACTIONS.APPLYCONSTRUCTION.OFFER
+
+local function DoKeyStoneAct(inst, doer)
+	if inst.components.container ~= nil then
+		BufferedAction(doer, inst, ACTIONS.APPLYCONSTRUCTION):Do()
+	elseif inst.replica.container ~= nil and not inst.replica.container:IsBusy() then
+		SendRPCToServer(RPC.DoWidgetButtonAction, ACTIONS.APPLYCONSTRUCTION.code, inst, ACTIONS.APPLYCONSTRUCTION.mod_name)
+	end
+end
+
+local function GiveKeyStoneGoBack()
+	TheFrontEnd:PopScreen()
+end
+
+function params.socket_keystone_construction_container.widget.buttoninfo.fn(inst, doer)
+	if not params.socket_keystone_construction_container.widget.overrideactionfn(inst, doer) then
+		-- No UI no dialogue.
+		DoKeyStoneAct(inst, doer)
+	end
+end
+
+function params.socket_keystone_construction_container.widget.overrideactionfn(inst, doer)
+	if doer ~= nil and doer.HUD ~= nil and IsConstructionSiteComplete(inst, doer) then
+		-- We have UI do dialogue.
+		local function GiveKeyStonePopUp()
+			DoKeyStoneAct(inst, doer)
+			TheFrontEnd:PopScreen()
+		end
+
+		local str = inst.POPUP_STRINGS
+		local confirmation = RiftConfirmScreen(str.TITLE, str.BODY,
+		{
+			{ text = str.OK,     cb = GiveKeyStonePopUp },
+            { text = str.CANCEL, cb = GiveKeyStoneGoBack  },
+		})
+
+		TheFrontEnd:PushScreen(confirmation)
+		return true
+	end
+	return false
 end
 
 --------------------------------------------------------------------------
@@ -2279,7 +2496,7 @@ end
 --------------------------------------------------------------------------
 
 for k, v in pairs(params) do
-    containers.MAXITEMSLOTS = math.max(containers.MAXITEMSLOTS, v.widget.slotpos ~= nil and #v.widget.slotpos or 0)
+	containers.MAXITEMSLOTS = math.max(containers.MAXITEMSLOTS, v.widget.numslots or (v.widget.slotpos and #v.widget.slotpos or 0))
 end
 
 --------------------------------------------------------------------------

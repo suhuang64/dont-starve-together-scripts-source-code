@@ -562,6 +562,14 @@ local prefabs =
 
 	--winter 2025
 	"giftsurprise",
+
+    -- Year of the Clockwork Knight
+    "yothknightwarningsound",
+
+    "hot_splash",
+
+    -- TODO #FIXME
+    "carnivalgame_golfgame",
 }
 
 local FISH_DATA = require("prefabs/oceanfishdef")
@@ -685,6 +693,8 @@ local function master_postinit(inst)
     inst:AddComponent("yotd_raceprizemanager")
     inst:AddComponent("yotc_raceprizemanager")
     inst:AddComponent("yotb_stagemanager")
+    inst:AddComponent("yoth_knightmanager")
+    inst:AddComponent("yoth_hecklermanager")
 
     inst:AddComponent("moonstormmanager")
 
@@ -725,7 +735,9 @@ local function master_postinit(inst)
     inst:AddComponent("wanderingtraderspawner")
 
     -- Hallowed Nights 2025
-    inst:AddComponent("mutatedbirdmanager")
+    --inst:AddComponent("mutatedbirdmanager") -- NOTES(OMAR): This component is deprecated.
+    inst:AddComponent("migrationmanager")
+    inst:AddComponent("mutatedbuzzardmanager")
 end
 
 return MakeWorld("forest", prefabs, assets, common_postinit, master_postinit, {"forest"}, {

@@ -554,7 +554,12 @@ end
 
 function Health:CanFadeOut()
     -- Intentional lack of IsValid().
-    return not self.nofadeout and not EntityHasCorpse(self.inst)
+    return not self.nofadeout and not self.is_corpsing
+end
+
+local function OnCorpsingEntitySleep(inst) -- Go instantly to corpse state
+    inst.sg:GoToState("corpse")
+    inst:PushEventImmediate("forcecorpsereplace")
 end
 
 function Health:SetVal(val, cause, afflicter)
@@ -579,10 +584,8 @@ function Health:SetVal(val, cause, afflicter)
         -- NOTES(JBK): Make sure to keep the events fired up to date with the explosive component.
         --Push world event first, because the entity event may invalidate itself
         --i.e. items that use .nofadeout and manually :Remove() on "death" event
+        self.causeofdeath = afflicter or nil
         local is_corpsing = CanEntityBecomeCorpse(self.inst)
-        if is_corpsing and self.inst.components.lootdropper then
-            self.inst.components.lootdropper.forcewortoxsouls = true -- NOTE: Workaround to the fact that corpsing creatures don't drop their loot right away.
-        end
         TheWorld:PushEvent("entity_death", { inst = self.inst, cause = cause, afflicter = afflicter, corpsing = is_corpsing })
         self.inst:PushEvent("death", { cause = cause, afflicter = afflicter, corpsing = is_corpsing })
         self.is_corpsing = is_corpsing
@@ -597,6 +600,12 @@ function Health:SetVal(val, cause, afflicter)
             self.inst:AddTag("NOCLICK")
             self.inst.persists = false
             self.inst.erode_task = self.inst:DoTaskInTime(self.destroytime or 2, ErodeAway)
+        elseif self.is_corpsing then
+            if self.inst:IsAsleep() then
+                OnCorpsingEntitySleep(self.inst)
+            else
+                self.inst:ListenForEvent("entitysleep", OnCorpsingEntitySleep)
+            end
         end
     end
 end

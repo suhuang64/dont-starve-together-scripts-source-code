@@ -259,7 +259,7 @@ local function LaunchItem(inst, target, item)
 end
 
 local function OnGroundPound(inst)
-    if math.random() < .2 then
+    if math.random() <= TUNING.BEARGER_MULTISHED_CHANCE then
         inst.components.shedder:DoMultiShed(3, false) -- can't drop too many, or it'll be really easy to farm for thick furs
     end
 end
@@ -269,7 +269,8 @@ local function OnHitOther(inst, data)
         return
     end
 
-	if inst.sg:HasStateTag("weapontoss") and data.target ~= nil and data.target.components.inventory ~= nil and not data.target:HasTag("stronggrip") then
+	if inst.sg:HasStateTag("weapontoss") and data.target ~= nil and data.target.components.inventory ~= nil and not data.target:HasTag("stronggrip")
+        and not data.target.components.inventory:IsThiefProof() then
         local item = data.target.components.inventory:GetEquippedItem(EQUIPSLOTS.HANDS)
         if item ~= nil and not item:HasTag("nosteal") then
             data.target.components.inventory:DropItem(item)
@@ -744,6 +745,11 @@ local mutated_scrapbook_overridedata = {
     { "flameR", "lunar_flame", "flameanim", 0.6 },
 }
 
+local mutated_scrapbook_adddeps =
+{
+	"lunarthrall_plant_gestalt",
+}
+
 local COOLANT_LOOT = {"coolant"}
 local function LootSetupFn_mutated(lootdropper)
     lootdropper:SetLoot(TheWorld.components.wagboss_tracker and TheWorld.components.wagboss_tracker:IsWagbossDefeated() and COOLANT_LOOT or nil)
@@ -798,6 +804,7 @@ local function mutatedfn()
 
     inst.sounds = mutated_sounds
     inst.scrapbook_overridedata = mutated_scrapbook_overridedata
+	inst.scrapbook_adddeps = mutated_scrapbook_adddeps
 
 	inst.cancombo = true
 	inst.canbutt = true

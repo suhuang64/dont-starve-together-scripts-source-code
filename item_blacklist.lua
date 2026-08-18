@@ -44,7 +44,9 @@ ITEM_DISPLAY_BLACKLIST =
 	boat_grass_pirate_item = true,
 	boat_nautical_item = true,
 	boat_pirate_skin_item = true,
+	boat_tesla_item = true,
 	boat_wagstaff_item = true,
+	bulbin_rw_basic_builder = true,
 	bundlewrap_cawnival = true,
 	bundlewrap_gothic = true,
 	bundlewrap_kitchen = true,
@@ -89,6 +91,7 @@ ITEM_DISPLAY_BLACKLIST =
 	dug_gravestone_gothic2 = true,
 	dug_gravestone_gothic3 = true,
 	dug_gravestone_gothic4 = true,
+	eets_e_basic_builder = true,
 	eyeplant_bulb_trap_plantera = true,
 	eyeturret_anitem = true,
 	fence_ancient_item = true,
@@ -99,6 +102,7 @@ ITEM_DISPLAY_BLACKLIST =
 	fence_picketbrown_item = true,
 	fence_pickettan_item = true,
 	fence_picketwhite_item = true,
+	fence_rose_item = true,
 	fence_shell_item = true,
 	fence_victorianblack_item = true,
 	fence_victorianbrass_item = true,
@@ -109,6 +113,7 @@ ITEM_DISPLAY_BLACKLIST =
 	fencegate_picketbrown_item = true,
 	fencegate_pickettan_item = true,
 	fencegate_picketwhite_item = true,
+	fencegate_rose_item = true,
 	fencegate_shell_item = true,
 	fencegate_victorianblack_item = true,
 	fencegate_victorianbrass_item = true,
@@ -119,6 +124,7 @@ ITEM_DISPLAY_BLACKLIST =
 	firestaff_lance = true,
 	firestaff_northern = true,
 	firestaff_rose = true,
+	firestaff_rw_swamp = true,
 	gemsocket_crystal = true,
 	gemsocket_hallowpylon = true,
 	gemsocket_mystical = true,
@@ -140,6 +146,7 @@ ITEM_DISPLAY_BLACKLIST =
 	icestaff_lance = true,
 	icestaff_northern = true,
 	icestaff_rose = true,
+	icestaff_rw_swamp = true,
 	insanityrock_fantasy = true,
 	insanityrock_gothic = true,
 	kitten_black_builder = true,
@@ -150,6 +157,7 @@ ITEM_DISPLAY_BLACKLIST =
 	lunarmoth_bright_builder = true,
 	mast_crabking_alt_item = true,
 	mast_crabking_item = true,
+	mast_malbatross_tesla_item = true,
 	mast_malbatross_wagstaff_item = true,
 	mast_nautical_item = true,
 	mast_pirate_item = true,
@@ -162,6 +170,8 @@ ITEM_DISPLAY_BLACKLIST =
 	minerhat_cowboy = true,
 	minerhat_floppy = true,
 	minerhat_western = true,
+	minisign_cawnival_drawn = true,
+	minisign_cawnival_item = true,
 	minisign_fantasy_drawn = true,
 	minisign_fantasy_item = true,
 	minisign_ornate_drawn = true,
@@ -229,6 +239,9 @@ ITEM_DISPLAY_BLACKLIST =
 	researchlab4_hutch_costume = true,
 	researchlab4_hutch_costumep = true,
 	researchlab4_merchant = true,
+	researchlab4_minigolf_green = true,
+	researchlab4_minigolf_purple = true,
+	researchlab4_minigolf_red = true,
 	researchlab4_tophat_circus = true,
 	researchlab4_tophat_harlequin = true,
 	researchlab4_tophat_spiked = true,
@@ -265,6 +278,7 @@ ITEM_DISPLAY_BLACKLIST =
 	stagehand_dragonfly = true,
 	stagehand_vintage = true,
 	steeringwheel_nautical_item = true,
+	steeringwheel_tesla_item = true,
 	steeringwheel_wagstaff_item = true,
 	tornado_crow = true,
 	treasurechest_upgraded_ancient = true,
@@ -288,6 +302,7 @@ ITEM_DISPLAY_BLACKLIST =
 	walkingplank_grass_pirate = true,
 	walkingplank_nautical = true,
 	walkingplank_pirate_skin = true,
+	walkingplank_tesla = true,
 	walkingplank_wagstaff = true,
 	wall_dreadstone_relicitem = true,
 	wall_hay_cornitem = true,
@@ -303,9 +318,13 @@ ITEM_DISPLAY_BLACKLIST =
 	wall_stone_ancientitem = true,
 	wall_stone_anitem = true,
 	wall_stone_gothicitem = true,
+	wall_stone_roseitem = true,
 	wall_stone_shellitem = true,
 	wall_stone_victorianitem = true,
 	wall_wood_ornateitem = true,
+	walrushat_minigolf_green = true,
+	walrushat_minigolf_purple = true,
+	walrushat_minigolf_red = true,
 	wathgrithr_improvedhat_flower = true,
 	wathgrithr_improvedhat_lunar = true,
 	wathgrithr_improvedhat_valkyrie = true,
@@ -325,11 +344,25 @@ ITEM_DISPLAY_BLACKLIST =
 	woby_big_ribbon = true,
 	woby_big_ribbon_lunar = true,
 	woby_big_ribbon_shadow = true,
+	wx78_dronedelivery_gothic = true,
+	wx78_dronedelivery_item_gothic = true,
+	wx78_dronedelivery_item_jewelbox = true,
+	wx78_dronedelivery_jewelbox = true,
+	wx78_dronedeliverysmall_item_gothic = true,
+	wx78_dronedeliverysmall_item_jewelbox = true,
+	wx78_dronezap_gothic = true,
+	wx78_dronezap_gothic_overlay = true,
+	wx78_dronezap_jewelbox = true,
+	wx78_dronezap_jewelbox_overlay = true,
 	wx78_scanner_catcoon_item = true,
 	wx78_scanner_fancy_item = true,
+	wx78_scanner_gothic_item = true,
+	wx78_scanner_jewelbox_item = true,
 	wx78_scanner_junky_item = true,
 	wx78_scanner_succeeded_catcoon = true,
 	wx78_scanner_succeeded_fancy = true,
+	wx78_scanner_succeeded_gothic = true,
+	wx78_scanner_succeeded_jewelbox = true,
 	wx78_scanner_succeeded_junky = true,
 	beebox_hermit_yule = true,
 	hermit_chair_rocking_yule = true,
@@ -356,11 +389,16 @@ ITEM_DISPLAY_BLACKLIST =
 	meatrack_hermit_yule = true,
 	pumpkinhat_2 = true,
 	pumpkinhat_3 = true,
+	w_radio_basic = true,
 }
 
 HIDE_SKIN_DECORATIONS =
 {
 	beebox_hermit_yule = true,
+	bulbin_rw_basic = true,
+	bulbin_rw_basic_builder = true,
+	eets_e_basic = true,
+	eets_e_basic_builder = true,
 	hermit_chair_rocking_yule = true,
 	hermitcrab_lightpost_yule = true,
 	hermitcrab_teashop_yule = true,
@@ -383,6 +421,7 @@ HIDE_SKIN_DECORATIONS =
 	hermithouse_yule = true,
 	meatrack_hermit_multi_yule = true,
 	meatrack_hermit_yule = true,
+	w_radio_basic = true,
 }
 
 SKINS_EVENTLOCK =
@@ -404,5 +443,31 @@ SKINS_EVENTLOCK =
 	hermithouse_yule = "winters_feast",
 	meatrack_hermit_multi_yule = "winters_feast",
 	meatrack_hermit_yule = "winters_feast",
+}
+
+UNLOCKABLE_SKINS =
+{
+	w_radio_basic = true,
+}
+
+CRAFTING_RECIPE_UNLOCKED_SKIN =
+{
+	bulbin_rw_basic = true,
+	eets_e_basic = true,
+}
+
+SKINOVERRIDES =
+{
+	idleanimations_wx78_headadjust = {
+		character = "wx78",
+		oninitfn = function(inst) if inst.components.skinner:SetItemIdleAnimation("idleanimations_wx78_headadjust") then inst.AnimState:OverrideSkinSymbol("wire", "idleanimations_wx78_headadjust", "wire") end end,
+		onclearfn = function(inst) inst.components.skinner:SetItemIdleAnimation(nil) inst.AnimState:ClearOverrideSymbol("wire") end,
+		canttags = {
+			"idleanimations",
+		},
+		tags = {
+			"idleanimations",
+		},
+	},
 }
 

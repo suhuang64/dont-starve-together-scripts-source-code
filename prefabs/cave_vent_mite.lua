@@ -5,8 +5,10 @@ local assets =
     Asset("SOUND", "sound/rifts6.fsb"),
 }
 
-local prefabs = {
+local prefabs =
+{
     "monstermeat",
+    "mitegland",
 }
 
 local brain = require "brains/caveventmitebrain"
@@ -145,6 +147,8 @@ local function fn()
         return inst
     end
 
+	inst.scrapbook_hidesymbol = { "red_vent" }
+
     inst.override_combat_fx_size = "small"
 
     local color = 0.5 + math.random() * 0.5
@@ -179,6 +183,7 @@ local function fn()
 
     inst:AddComponent("lootdropper")
     inst.components.lootdropper:AddRandomLoot("monstermeat", 1)
+    inst.components.lootdropper:AddRandomLoot("mitegland", 1)
     inst.components.lootdropper.numrandomloot = 1
 
     inst:AddComponent("sanityaura")

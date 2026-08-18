@@ -355,6 +355,9 @@ local function OnEquipToModel(inst, owner, from_ground)
     end
 end
 
+local function FreeAmmoChanceAdditive(inst, chance, luck)
+	return luck > 0 and chance + (luck * .2)
+end
 local function OnProjectileLaunched(inst, attacker, target, proj)
     if attacker ~= nil and attacker.components.rider ~= nil and attacker.components.rider:IsRiding() then
         if proj.SetHighProjectile ~= nil then
@@ -375,7 +378,7 @@ local function OnProjectileLaunched(inst, attacker, target, proj)
 	end
 
 	if inst.components.slingshotmods:HasPartName("slingshot_band_mimic") and
-		math.random() < TUNING.SLINGSHOT_MOD_FREE_AMMO_CHANCE
+		TryLuckRoll(attacker, TUNING.SLINGSHOT_MOD_FREE_AMMO_CHANCE, FreeAmmoChanceAdditive)
 	then
 		--launched a mimic ammo, so don't deplete real ammo stack
 	elseif inst.components.container then
@@ -775,6 +778,8 @@ local function slingshot2ex_common_postinit(inst)
 	inst.components.aoetargeting.reticule.invalidcolour = { .5, 0, 0, 1 }
 	inst.components.aoetargeting.reticule.ease = true
 	inst.components.aoetargeting.reticule.mouseenabled = true
+	inst.components.aoetargeting.reticule.twinstickmode = 1
+	inst.components.aoetargeting.reticule.twinstickrange = 6.5
 end
 
 local function slingshot2ex_SpellFn(inst, doer, pos)

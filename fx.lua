@@ -67,6 +67,16 @@ local fx =
         anim = "idle",
     },
     {
+        name = "hot_splash",
+        bank = "splash",
+        build = "splash",
+        anim = "splash",
+        sound = "turnoftides/common/together/water/splash/bird",
+        sound2 = "moonstorm/characters/wagstaff/thumper/steam",
+        sounddelay2 = 2 * FRAMES,
+        fn = FinalOffset1,
+    },
+    {
         name = "splash",
         bank = "splash",
         build = "splash",
@@ -256,6 +266,18 @@ local fx =
         build = "sand_puff",
         anim = "forage_out",
         sound = "dontstarve/common/deathpoof",
+        tint = Vector3(0, 0, 0),
+        fn = function(inst)
+            inst.AnimState:SetFinalOffset(2)
+        end,
+    },
+    {
+        name = "shadow_puff_solid_large",
+        bank = "sand_puff",
+        build = "sand_puff",
+        anim = "forage_out",
+        sound = "dontstarve/common/deathpoof",
+        transform = Vector3(1.5, 1.5, 1.5),
         tint = Vector3(0, 0, 0),
         fn = function(inst)
             inst.AnimState:SetFinalOffset(2)
@@ -1179,11 +1201,19 @@ local fx =
         fn = FinalOffset3,
     },
     {
+        name = "ghostlyelixir_revive_fx",
+        bank = "abigail_vial_fx",
+        build = "abigail_vial_fx",
+        anim = "buff_revive",
+        sound = "dontstarve/characters/wendy/abigail/buff/retaliation", -- TODO unique sound at some point?
+        fn = FinalOffset3,
+    },
+    {
         name = "ghostlyelixir_shadow_fx",
         bank = "abigail_vial_fx",
         build = "abigail_vial_fx",
         anim = "buff_shadow",
-        --sound = "dontstarve/characters/wendy/abigail/buff/shadow", --[[TODO]]
+        sound = "meta5/abigail/abigail_shadow_buff",
         fn = FinalOffset3,
     }, 
     {
@@ -1191,7 +1221,7 @@ local fx =
         bank = "abigail_vial_fx",
         build = "abigail_vial_fx",
         anim = "buff_lunar",
-        --sound = "dontstarve/characters/wendy/abigail/buff/lunar", --[[TODO]]
+        sound = "meta5/abigail/abigail_lunar_buff",
         fn = FinalOffset3,
     },        
     {
@@ -1251,6 +1281,16 @@ local fx =
         anim = "abigail_buff_drip",
         fn = function(inst)
 	        inst.AnimState:OverrideSymbol("fx_swap", "abigail_vial_fx", "fx_retaliation_02")
+		    inst.AnimState:SetFinalOffset(3)
+		end,
+    },
+    {
+        name = "ghostlyelixir_revive_dripfx",
+        bank = "abigail_buff_drip",
+        build = "abigail_vial_fx",
+        anim = "abigail_buff_drip",
+        fn = function(inst)
+	        inst.AnimState:OverrideSymbol("fx_swap", "abigail_vial_fx", "fx_revive_02")
 		    inst.AnimState:SetFinalOffset(3)
 		end,
     },
@@ -1325,21 +1365,29 @@ local fx =
         fn = FinalOffset3,
     },
     {
+        name = "ghostlyelixir_player_revive_fx",
+        bank = "player_vial_fx",
+        build = "player_vial_fx",
+        anim = "buff_revive",
+        sound = "dontstarve/characters/wendy/abigail/buff/retaliation",
+        fn = FinalOffset3,
+    },
+    { -- NOTE: (Omar): This is unused.
         name = "ghostlyelixir_player_shadow_fx",
         bank = "player_vial_fx",
         build = "player_vial_fx",
         anim = "buff_shadow",
-        --sound = "dontstarve/characters/wendy/abigail/buff/shadow", --[[TODO]]
+        --sound = "dontstarve/characters/wendy/abigail/buff/shadow",
         fn = FinalOffset3,
     }, 
-    {
+    { -- NOTE: (Omar): This is unused.
         name = "ghostlyelixir_player_lunar_fx",
         bank = "player_vial_fx",
         build = "player_vial_fx",
         anim = "buff_lunar",
-        --sound = "dontstarve/characters/wendy/abigail/buff/lunar", --[[TODO]]
+        --sound = "dontstarve/characters/wendy/abigail/buff/lunar",
         fn = FinalOffset3,
-    },        
+    },
     {
         name = "ghostlyelixir_player_slowregen_dripfx",
         bank = "player_elixir_buff_drip",
@@ -1397,6 +1445,16 @@ local fx =
         anim = "player_elixir_buff_drip",
         fn = function(inst)
             inst.AnimState:OverrideSymbol("fx_swap", "abigail_vial_fx", "fx_retaliation_02")
+            inst.AnimState:SetFinalOffset(3)
+        end,
+    },
+    {
+        name = "ghostlyelixir_player_revive_dripfx",
+        bank = "player_elixir_buff_drip",
+        build = "player_vial_fx",
+        anim = "player_elixir_buff_drip",
+        fn = function(inst)
+            inst.AnimState:OverrideSymbol("fx_swap", "abigail_vial_fx", "fx_revive_02")
             inst.AnimState:SetFinalOffset(3)
         end,
     },
@@ -1536,6 +1594,12 @@ local fx =
         anim = "unwrap",
     },
     {
+        name = "redpouch_yoth_unwrap",
+        bank = "redpouch",
+        build = "redpouch",
+        anim = "unwrap",
+    },
+    {
         name = "yotc_seedpacket_unwrap",
         bank = "bundle",
         build = "bundle",
@@ -1561,12 +1625,6 @@ local fx =
     },
     {
         name = "hermit_bundle_unwrap",
-        bank = "hermit_bundle",
-        build = "hermit_bundle",
-        anim = "unwrap",
-    },
-    {
-        name = "hermit_bundle_shells_unwrap",
         bank = "hermit_bundle",
         build = "hermit_bundle",
         anim = "unwrap",
@@ -2304,6 +2362,20 @@ local fx =
         fn = FinalOffset1,
     },
     {
+        name = "carnival_unwrap_fx_s2", -- yellow box
+        bank = "carnival_unwrap",
+        build = "carnival_unwrap",
+        anim = "unwrap_yellow",
+        fn = FinalOffset1,
+    },
+    {
+        name = "carnival_unwrap_fx_s3", -- red box
+        bank = "carnival_unwrap",
+        build = "carnival_unwrap",
+        anim = "unwrap_red",
+        fn = FinalOffset1,
+    },
+    {
         name = "carnivalgame_shooting_projectile_fx",
         bank = "carnivalgame_shooting_projectile",
         build = "carnivalgame_shooting_projectile",
@@ -2637,7 +2709,7 @@ local fx =
         end,
     },
 
-    {
+	{	--Deprecated
         name = "wx78_heat_steam",
         bank = "wx_fx",
         build = "wx_fx",
@@ -3842,6 +3914,47 @@ local fx =
 		build = "vault_portal_fx",
 		anim = "activate",
 	},
+	{
+		name = "fumarole_ember",
+		bank = "trap_fumarole",
+		build = "trap_fumarole",
+		anim = "fire_pre",
+        animqueue = true,
+        bloom = true,
+        fn = function(inst)
+            inst.AnimState:SetLightOverride(0.3)
+
+            local x, y, z = inst.Transform:GetWorldPosition()
+            local w, h = TheWorld.Map:GetSize()
+
+            x = math.floor(x * 100 + 0.5) * 0.01
+			z = math.floor(z * 100 + 0.5) * 0.01
+
+            local prng = PRNG_Uniform(z * w + z)
+
+        	inst.AnimState:SetLayer(LAYER_WORLD_BACKGROUND)
+	        inst.AnimState:SetSortOrder(3)
+
+            for i = 1, prng:RandInt(1, 5) do
+                inst.AnimState:PushAnimation("fire_loop", false)
+            end
+            inst.AnimState:PushAnimation("fire_pst", false)
+
+            local sx, sy = .7 + prng:Rand() * .5, .7 + prng:Rand() * .5
+            sx = prng:Rand() < 0.5 and -sx or sx
+            inst.AnimState:SetScale(sx, sy)
+        end,
+	},
+    {
+        name = "fumarole_cook_fx",
+        bank = "lavaarena_creature_teleport_smoke_fx",
+        build = "lavaarena_creature_teleport_smoke_fx",
+        anim = function() return "smoke_"..math.random(3) end,
+		fn = function(inst)
+			local scale = .35 + math.random() * .25
+			inst.AnimState:SetScale(math.random() < .5 and scale or -scale, scale)
+		end,
+    },
 }
 
 for cratersteamindex = 1, 4 do
@@ -3956,7 +4069,48 @@ for i, size in ipairs(FX_SIZES) do
     end
 end
 
+local WX78_SHIELD_ANIMS =
+{
+    "full",
+    "half",
+    "full_to_half",
+    "half_to_full",
+    "full_to_empty",
+    "half_to_empty",
+}
+local WX_SHIELD_COLOUR = { 243 / 255, 187 / 255, 6 / 255 } -- NOTES(OMAR): Keep in sync with widgets/healthbadge.lua:WX_SHIELD_COLOUR
+local function Wx78ShieldFn(inst)
+    inst.AnimState:SetFinalOffset(1)
+    inst.AnimState:SetMultColour(WX_SHIELD_COLOUR[1], WX_SHIELD_COLOUR[2], WX_SHIELD_COLOUR[3], 1)
+end
+
+local function Wx78ShieldSetNoParent(inst)
+    if inst.entity:GetParent() ~= nil then
+        inst.Transform:SetPosition(inst.Transform:GetWorldPosition())
+        inst.entity:SetParent(nil)
+    end
+end
+
+local DELAY_SHIELDFX_SET_NO_PARENT = 11 * FRAMES
+local function Wx78ShieldBreakFn(inst)
+    Wx78ShieldFn(inst)
+    inst:DoTaskInTime(DELAY_SHIELDFX_SET_NO_PARENT, Wx78ShieldSetNoParent)
+end
+
+for i, anim in ipairs(WX78_SHIELD_ANIMS) do
+    table.insert(fx, {
+        name = "wx78_shield_"..anim,
+        bank = "wx78_shield_fx",
+        build = "wx78_shield_fx",
+        anim = anim,
+        nofaced = true,
+        -- sound = "rifts5/hermit_island/whirlpool_up_s",
+        fn = ((anim == "full_to_empty" or anim == "half_to_empty") and Wx78ShieldBreakFn or Wx78ShieldFn),
+    })
+end
+
 FinalOffset1 = nil
 FinalOffset2 = nil
+FinalOffset3 = nil
 
 return fx

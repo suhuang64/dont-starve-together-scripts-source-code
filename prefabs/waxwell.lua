@@ -69,9 +69,11 @@ end
 
 local function OnDespawnPet(inst, pet)
     if pet:HasTag("shadowminion") then
-		if pet.components.inventory then --Because we can despawn without dying, e.g. 0 damage weapon from a maxwell which despawns us
-			pet.components.inventory:DropEverything()
-		end
+        if not inst.is_snapshot_user_session and not inst.is_despawning then
+            if pet.components.inventory then --Because the pet can despawn without dying, e.g. 0 damage weapon from a maxwell which despawns us
+                pet.components.inventory:DropEverything()
+            end
+        end
 		if not inst.is_snapshot_user_session and pet.sg ~= nil then
 			pet.sg:GoToState("quickdespawn")
 		else
@@ -148,6 +150,7 @@ local function ForceDespawnShadowMinions(inst)
 end
 
 local function OnDespawn(inst, migrationdata)
+	inst.is_despawning = true
 	if migrationdata ~= nil then
 		ForceDespawnShadowMinions(inst)
 	end
